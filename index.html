@@ -123,6 +123,13 @@
 
       <!-- Error feedback -->
       <div id="pin-error" class="text-xs text-rose-400 font-semibold mt-4 min-h-[16px]"></div>
+
+      <!-- Force reload & clear cache button for iPhone -->
+      <div class="mt-4 pt-3 border-t border-slate-800/80">
+        <button onclick="forceClearCacheAndReload()" class="w-full py-2 px-3 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/60 text-[11px] font-semibold text-slate-400 hover:text-cyan-300 active:scale-95 flex items-center justify-center gap-1.5 transition-all">
+          <span>🔄</span> Очистить кэш и обновить сайт
+        </button>
+      </div>
     </div>
   </div>
 
@@ -221,6 +228,9 @@
         <span>🎯</span> Цели
       </button>
       <div class="flex-grow"></div>
+      <button onclick="forceClearCacheAndReload()" title="Очистить кэш и обновить приложение" class="py-2 px-2.5 sm:py-2.5 sm:px-3 rounded-xl border border-slate-700/60 text-slate-400 hover:text-amber-300 hover:border-amber-500/40 bg-slate-900/60 flex items-center gap-1 whitespace-nowrap text-xs transition-all">
+        <span>🔄</span> <span class="hidden sm:inline">Обновить</span>
+      </button>
       <button onclick="lockAppManually()" title="Заблокировать приложение" class="py-2 px-3 sm:py-2.5 sm:px-3 rounded-xl border border-slate-700/60 text-slate-400 hover:text-cyan-300 hover:border-cyan-500/40 bg-slate-900/60 flex items-center gap-1.5 whitespace-nowrap text-xs transition-all">
         <span>🔒</span> Блокировка
       </button>
@@ -2126,6 +2136,28 @@
       if (content) {
         content.classList.remove('opacity-0');
       }
+    }
+
+    async function forceClearCacheAndReload() {
+      try {
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (const reg of registrations) {
+            await reg.unregister();
+          }
+        }
+        if ('caches' in window) {
+          const cacheKeys = await caches.keys();
+          for (const key of cacheKeys) {
+            await caches.delete(key);
+          }
+        }
+      } catch (err) {
+        console.warn('Cache clearing error:', err);
+      }
+      // Force reload ignoring cache with cache buster query parameter
+      const cleanUrl = window.location.origin + window.location.pathname + '?t=' + Date.now();
+      window.location.replace(cleanUrl);
     }
 
     function lockAppManually() {
