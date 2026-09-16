@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Атлетика & Фарма" />
+  <meta name="format-detection" content="telephone=no" />
+  <meta name="theme-color" content="#0b0f19" />
+  <title>Атлетический Прогресс, Тепловая Карта & Фарм-Протокол</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --sat: env(safe-area-inset-top, 0px);
+      --sab: env(safe-area-inset-bottom, 0px);
+    }
+    * {
+      -webkit-tap-highlight-color: transparent;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #0b0f19;
+      color: #e2e8f0;
+      touch-action: manipulation;
+      padding-top: max(16px, var(--sat));
+      padding-bottom: max(24px, var(--sab));
+    }
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .muscle-part {
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .muscle-part:hover, .muscle-part:active {
+      filter: brightness(1.35) drop-shadow(0 0 10px rgba(56, 189, 248, 0.6));
+    }
+    .muscle-active {
+      filter: brightness(1.45) drop-shadow(0 0 14px rgba(239, 68, 68, 0.9)) !important;
+      stroke: #ffffff !important;
+      stroke-width: 2px !important;
+    }
+    .glass-card {
+      background: rgba(17, 24, 39, 0.78);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .badge-record {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(249, 115, 22, 0.2));
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+    }
+    .badge-growth {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.2));
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #6ee7b7;
+    }
+    .badge-stable {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.2));
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      color: #93c5fd;
+    }
+    .badge-pharma {
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(147, 51, 234, 0.2));
+      border: 1px solid rgba(168, 85, 247, 0.4);
+      color: #d8b4fe;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="min-h-screen selection:bg-cyan-500/30 selection:text-cyan-200">
+
+  <!-- PIN Code Lock Screen Overlay -->
+  <div id="pin-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-[#070a12]/95 backdrop-blur-2xl p-4 transition-all duration-300">
+    <div class="glass-card max-w-sm w-full p-6 sm:p-8 rounded-3xl border border-cyan-500/20 shadow-2xl text-center relative overflow-hidden">
+      <!-- Decor light -->
+      <div class="absolute -top-12 -left-12 w-32 h-32 bg-cyan-500/20 rounded-full blur-2xl pointer-events-none"></div>
+      <div class="absolute -bottom-12 -right-12 w-32 h-32 bg-purple-500/20 rounded-full blur-2xl pointer-events-none"></div>
+
+      <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyan-500/20 to-purple-500/20 border border-cyan-500/30 mx-auto flex items-center justify-center text-3xl shadow-lg mb-4">
+        🔒
+      </div>
+      <h2 id="pin-title" class="text-xl font-extrabold text-white">Вход по PIN-коду</h2>
+      <p id="pin-desc" class="text-xs text-slate-400 mt-1 mb-6">Введите 4-значный код для доступа к дневнику тренировок и фарм-протоколу</p>
+
+      <!-- PIN dots indicator -->
+      <div class="flex justify-center gap-3.5 mb-8" id="pin-dots">
+        <div class="w-4 h-4 rounded-full border-2 border-slate-600 bg-slate-800 transition-all duration-200" id="dot-0"></div>
+        <div class="w-4 h-4 rounded-full border-2 border-slate-600 bg-slate-800 transition-all duration-200" id="dot-1"></div>
+        <div class="w-4 h-4 rounded-full border-2 border-slate-600 bg-slate-800 transition-all duration-200" id="dot-2"></div>
+        <div class="w-4 h-4 rounded-full border-2 border-slate-600 bg-slate-800 transition-all duration-200" id="dot-3"></div>
+      </div>
+
+      <!-- Numeric Keypad (iOS style) -->
+      <div class="grid grid-cols-3 gap-3 max-w-[260px] mx-auto">
+        <button onclick="pressPin('1')" class="h-14 rounded-2xl bg-slate-800/80 hover:bg-slate-700 active:scale-95 border border-slate-700/60 text-xl font-bold text-white transition-all">1</button>
+        <button onclick="pressPin('2')" class="h-14 rounded-2xl bg-slate-800/80 hover:bg-slate-700 active:scale-95 border border-slate-700/60 text-xl font-bold text-white transition-all">2</button>
+        <button onclick="pressPin('3')" class="h-14 rounded-2xl bg-slate-800/80 hover:bg-slate-700 active:scale-95 border border-slate-700/60 text-xl font-bold text-white transition-all">3</button>
+        <button onclick="pressPin('4')" class="h-14 rounded-2xl bg-slate-800/80 hover:bg-slate-700 active:scale-95 border border-slate-700/60 text-xl font-bold text-white transition-all">4</button>
+        <button onclick="pressPin('5')" class="h-14 rounded-2xl bg-slate-800/80 hover:bg-slate-700 active:scale-95 border border-slate-700/60 text-xl font-bold text-white transition-all">5</button>
+        <button onclick="pressPin('6')" class="h-14 rounded-2xl bg-slate-800/80 hover:bg-slate-700 active:scale-95 border border-slate-700/60 text-xl font-bold text-white transition-all">6</button>
+        <button onclick="pressPin('7')" class="h-14 rounded-2xl bg-slate-800/80 hover:bg-slate-700 active:scale-95 border border-slate-700/60 text-xl font-bold text-white transition-all">7</button>
+        <button onclick="pressPin('8')" class="h-14 rounded-2xl bg-slate-800/80 hover:bg-slate-700 active:scale-95 border border-slate-700/60 text-xl font-bold text-white transition-all">8</button>
+        <button onclick="pressPin('9')" class="h-14 rounded-2xl bg-slate-800/80 hover:bg-slate-700 active:scale-95 border border-slate-700/60 text-xl font-bold text-white transition-all">9</button>
+        <button onclick="resetPinCodePrompt()" class="h-14 rounded-2xl hover:bg-slate-800/50 text-[11px] font-semibold text-slate-400 active:scale-95 flex items-center justify-center transition-all">Сброс</button>
+        <button onclick="pressPin('0')" class="h-14 rounded-2xl bg-slate-800/80 hover:bg-slate-700 active:scale-95 border border-slate-700/60 text-xl font-bold text-white transition-all">0</button>
+        <button onclick="pressPinBackspace()" class="h-14 rounded-2xl bg-slate-800/80 hover:bg-slate-700 active:scale-95 border border-slate-700/60 text-lg font-bold text-slate-300 flex items-center justify-center transition-all">⌫</button>
+      </div>
+
+      <!-- Error feedback -->
+      <div id="pin-error" class="text-xs text-rose-400 font-semibold mt-4 min-h-[16px]"></div>
+    </div>
+  </div>
+
+  <!-- Glow background -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+    <div class="absolute -top-40 left-1/4 w-72 md:w-96 h-72 md:h-96 bg-cyan-600/10 rounded-full blur-3xl"></div>
+    <div class="absolute top-1/3 -right-20 w-72 md:w-96 h-72 md:h-96 bg-purple-600/10 rounded-full blur-3xl"></div>
+    <div class="absolute -bottom-20 left-1/3 w-72 md:w-96 h-72 md:h-96 bg-emerald-600/10 rounded-full blur-3xl"></div>
+  </div>
+
+  <!-- Main App Content (hidden until unlocked) -->
+  <div id="app-content" class="relative z-10 max-w-7xl mx-auto px-3.5 sm:px-6 md:px-8 space-y-4 md:space-y-6 opacity-0 transition-opacity duration-300">
+
+    <!-- Header Section -->
+    <header class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 glass-card p-4 sm:p-6 rounded-2xl shadow-xl">
+      <div>
+        <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1.5">
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+            iPhone & Web Ready 📱
+          </span>
+          <span id="badge-pharma-header" class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold badge-pharma">
+            💉 Фарм-протокол
+          </span>
+          <span id="header-period" class="text-[11px] text-slate-400">Дневник</span>
+        </div>
+        <h1 class="text-xl sm:text-2xl md:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2">
+          Атлетический Прогресс & Рост Мышц
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-400 mt-1">Интерактивная карта гипертрофии, журнал с добавлением тренировок и фарм-протокол</p>
+      </div>
+
+      <!-- Quick Metrics Pills -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+        <div class="glass-card px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl border border-slate-700/50">
+          <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Вес тела</div>
+          <div class="flex items-baseline gap-1 mt-0.5">
+            <span id="header-weight" class="text-base sm:text-lg font-bold text-white mono">—</span>
+            <span class="text-[10px] sm:text-xs text-slate-400">кг</span>
+            <span id="header-weight-diff" class="text-[10px] sm:text-xs font-semibold text-emerald-400 ml-1">...</span>
+          </div>
+          <div id="header-weight-sub" class="text-[9px] sm:text-[10px] text-slate-500">Динамика</div>
+        </div>
+
+        <div class="glass-card px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl border border-slate-700/50">
+          <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Тоннаж Груди</div>
+          <div class="flex items-baseline gap-1 mt-0.5">
+            <span id="header-tonnage" class="text-base sm:text-lg font-bold text-white mono">—</span>
+            <span class="text-[10px] sm:text-xs text-slate-400">т</span>
+            <span id="header-tonnage-diff" class="text-[10px] sm:text-xs font-semibold text-emerald-400 ml-1">...</span>
+          </div>
+          <div id="header-tonnage-sub" class="text-[9px] sm:text-[10px] text-slate-500">Последняя сессия</div>
+        </div>
+
+        <div class="glass-card px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl border border-purple-500/30 bg-purple-950/20">
+          <div class="text-[10px] uppercase tracking-wider text-purple-300 font-semibold">Инъекции</div>
+          <div class="flex items-baseline gap-1 mt-0.5">
+            <span id="header-injections" class="text-base sm:text-lg font-bold text-purple-300 mono">—</span>
+            <span class="text-[10px] sm:text-xs text-purple-400">уколов</span>
+          </div>
+          <div class="text-[9px] sm:text-[10px] text-purple-300/90 font-semibold">Steady State 🚀</div>
+        </div>
+
+        <div class="glass-card px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl border border-slate-700/50">
+          <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Рекорд Силы</div>
+          <div class="flex items-baseline gap-1 mt-0.5">
+            <span class="text-base sm:text-lg font-bold text-red-400 mono">16.89</span>
+            <span class="text-[10px] sm:text-xs text-slate-400">т</span>
+          </div>
+          <div class="text-[9px] sm:text-[10px] text-slate-500">Ноги + Плечи 🏆</div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs (Optimized for iPhone swipe) -->
+    <div class="flex border-b border-slate-800 space-x-2 text-xs sm:text-sm font-medium overflow-x-auto no-scrollbar py-1">
+      <button id="tab-btn-body" onclick="switchTab('body')" class="py-2 px-3 sm:py-2.5 sm:px-4 rounded-xl border-b-2 border-cyan-400 text-cyan-300 bg-slate-800/60 flex items-center gap-1.5 whitespace-nowrap font-semibold">
+        <span>🧍‍♂️</span> Карта мышц
+      </button>
+      <button id="tab-btn-pharma" onclick="switchTab('pharma')" class="py-2 px-3 sm:py-2.5 sm:px-4 rounded-xl border-b-2 border-transparent text-slate-400 hover:text-purple-300 flex items-center gap-1.5 whitespace-nowrap">
+        <span>💉</span> Фарм-протокол
+        <span class="text-[9px] px-1 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">Энантат</span>
+      </button>
+      <button id="tab-btn-charts" onclick="switchTab('charts')" class="py-2 px-3 sm:py-2.5 sm:px-4 rounded-xl border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5 whitespace-nowrap">
+        <span>📊</span> Графики
+      </button>
+      <button id="tab-btn-table" onclick="switchTab('table')" class="py-2 px-3 sm:py-2.5 sm:px-4 rounded-xl border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5 whitespace-nowrap">
+        <span>📋</span> Журнал & Запись
+      </button>
+      <button id="tab-btn-goals" onclick="switchTab('goals')" class="py-2 px-3 sm:py-2.5 sm:px-4 rounded-xl border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5 whitespace-nowrap">
+        <span>🎯</span> Цели & Рекомендации
+      </button>
+      <div class="flex-grow"></div>
+      <button onclick="lockAppManually()" title="Заблокировать приложение" class="py-2 px-3 sm:py-2.5 sm:px-3 rounded-xl border border-slate-700/60 text-slate-400 hover:text-cyan-300 hover:border-cyan-500/40 bg-slate-900/60 flex items-center gap-1.5 whitespace-nowrap text-xs transition-all">
+        <span>🔒</span> Блокировка
+      </button>
+    </div>
+
+    <!-- TAB 1: BODY HEATMAP & DETAILS -->
+    <div id="tab-body" class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+      <div class="lg:col-span-5 glass-card p-4 sm:p-6 rounded-2xl flex flex-col items-center justify-between relative">
+        <div class="w-full flex items-center justify-between mb-3">
+          <div class="flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span class="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-300">Тепловая карта</span>
+          </div>
+          <div class="inline-flex p-1 bg-slate-900/90 rounded-lg border border-slate-700/60">
+            <button id="btn-view-front" onclick="setView('front')" class="px-2.5 py-1 rounded-md text-xs bg-cyan-500 text-slate-950 font-bold transition">Спереди</button>
+            <button id="btn-view-back" onclick="setView('back')" class="px-2.5 py-1 rounded-md text-xs text-slate-400 hover:text-white transition">Сзади</button>
+          </div>
+        </div>
+
+        <div class="w-full flex items-center justify-center gap-3 py-1.5 text-[10px] sm:text-[11px] text-slate-400 bg-slate-900/50 rounded-xl mb-3 border border-slate-800">
+          <div class="flex items-center gap-1">
+            <span class="w-2.5 h-2.5 rounded-full bg-red-500 shadow-sm shadow-red-500/50"></span>
+            <span>Рекорд / Огонь</span>
+          </div>
+          <div class="flex items-center gap-1">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50"></span>
+            <span>Прогресс</span>
+          </div>
+          <div class="flex items-center gap-1">
+            <span class="w-2.5 h-2.5 rounded-full bg-sky-500 shadow-sm shadow-sky-500/50"></span>
+            <span>База</span>
+          </div>
+        </div>
+
+        <!-- Body Model -->
+        <div class="relative w-full max-w-[320px] aspect-[1/1.7] flex items-center justify-center py-2 select-none">
+          <svg id="svg-front" viewBox="0 0 320 540" class="w-full h-full drop-shadow-2xl">
+            <g opacity="0.15" fill="#64748b">
+              <ellipse cx="160" cy="42" rx="22" ry="28" />
+              <rect x="150" y="68" width="20" height="18" rx="4" />
+              <path d="M125 85 Q160 88 195 85 L220 105 L230 195 L200 280 L188 380 L186 510 L168 510 L164 360 L156 360 L152 510 L134 510 L132 380 L120 280 L90 195 L100 105 Z" />
+            </g>
+            <g id="muscle-chest" class="muscle-part" onclick="selectMuscle('chest')">
+              <path d="M157 105 C157 105 130 102 114 116 C106 124 105 142 112 152 C120 162 144 165 157 155 Z" fill="#ef4444" fill-opacity="0.85" stroke="#f87171" stroke-width="1.5" />
+              <path d="M163 105 C163 105 190 102 206 116 C214 124 215 142 208 152 C200 162 176 165 163 155 Z" fill="#ef4444" fill-opacity="0.85" stroke="#f87171" stroke-width="1.5" />
+              <line x1="160" y1="104" x2="160" y2="156" stroke="#0b0f19" stroke-width="2" />
+            </g>
+            <g id="muscle-delts-front" class="muscle-part" onclick="selectMuscle('shoulders')">
+              <path d="M110 110 C96 116 88 132 94 150 C98 155 106 156 112 146 C116 138 116 122 110 110 Z" fill="#f59e0b" fill-opacity="0.8" stroke="#fbbf24" stroke-width="1.2" />
+              <path d="M210 110 C224 116 232 132 226 150 C222 155 214 156 208 146 C204 138 204 122 210 110 Z" fill="#f59e0b" fill-opacity="0.8" stroke="#fbbf24" stroke-width="1.2" />
+            </g>
+            <g id="muscle-biceps" class="muscle-part" onclick="selectMuscle('biceps')">
+              <path d="M93 154 C87 168 88 190 98 202 C104 198 107 186 107 172 C107 160 100 152 93 154 Z" fill="#10b981" fill-opacity="0.85" stroke="#34d399" stroke-width="1.2" />
+              <path d="M227 154 C233 168 232 190 222 202 C216 198 213 186 213 172 C213 160 220 152 227 154 Z" fill="#10b981" fill-opacity="0.85" stroke="#34d399" stroke-width="1.2" />
+            </g>
+            <g id="muscle-forearms" class="muscle-part" onclick="selectMuscle('forearms')">
+              <path d="M96 206 C88 225 80 255 86 276 C91 277 96 265 101 245 C104 230 104 212 96 206 Z" fill="#38bdf8" fill-opacity="0.5" stroke="#0ea5e9" stroke-width="1" />
+              <path d="M224 206 C232 225 240 255 234 276 C229 277 224 265 219 245 C216 230 216 212 224 206 Z" fill="#38bdf8" fill-opacity="0.5" stroke="#0ea5e9" stroke-width="1" />
+            </g>
+            <g id="muscle-abs" class="muscle-part" onclick="selectMuscle('core')">
+              <rect x="144" y="164" width="14" height="15" rx="3" fill="#0284c7" fill-opacity="0.75" stroke="#38bdf8" stroke-width="1" />
+              <rect x="162" y="164" width="14" height="15" rx="3" fill="#0284c7" fill-opacity="0.75" stroke="#38bdf8" stroke-width="1" />
+              <rect x="144" y="183" width="14" height="16" rx="3" fill="#0284c7" fill-opacity="0.75" stroke="#38bdf8" stroke-width="1" />
+              <rect x="162" y="183" width="14" height="16" rx="3" fill="#0284c7" fill-opacity="0.75" stroke="#38bdf8" stroke-width="1" />
+              <path d="M144 203 L158 203 L158 226 L146 222 Z" fill="#0284c7" fill-opacity="0.75" stroke="#38bdf8" stroke-width="1" />
+              <path d="M162 203 L176 203 L174 222 L162 226 Z" fill="#0284c7" fill-opacity="0.75" stroke="#38bdf8" stroke-width="1" />
+              <path d="M130 170 C125 190 128 215 138 230 C140 220 140 185 138 170 Z" fill="#0ea5e9" fill-opacity="0.5" />
+              <path d="M190 170 C195 190 192 215 182 230 C180 220 180 185 182 170 Z" fill="#0ea5e9" fill-opacity="0.5" />
+            </g>
+            <g id="muscle-quads" class="muscle-part" onclick="selectMuscle('legs')">
+              <path d="M125 260 C120 285 118 335 125 375 C132 382 144 382 153 370 C156 345 155 300 152 260 Z" fill="#dc2626" fill-opacity="0.9" stroke="#f87171" stroke-width="1.5" />
+              <path d="M195 260 C200 285 202 335 195 375 C188 382 176 382 167 370 C164 345 165 300 168 260 Z" fill="#dc2626" fill-opacity="0.9" stroke="#f87171" stroke-width="1.5" />
+              <ellipse cx="138" cy="385" rx="7" ry="6" fill="#7f1d1d" stroke="#fca5a5" stroke-width="1" />
+              <ellipse cx="182" cy="385" rx="7" ry="6" fill="#7f1d1d" stroke="#fca5a5" stroke-width="1" />
+            </g>
+            <g id="muscle-calves-front" class="muscle-part" onclick="selectMuscle('calves')">
+              <path d="M128 402 C124 430 125 470 133 498 C138 499 146 496 148 468 C150 440 148 410 145 402 Z" fill="#10b981" fill-opacity="0.6" stroke="#34d399" stroke-width="1" />
+              <path d="M192 402 C196 430 195 470 187 498 C182 499 174 496 172 468 C170 440 172 410 175 402 Z" fill="#10b981" fill-opacity="0.6" stroke="#34d399" stroke-width="1" />
+            </g>
+          </svg>
+
+          <svg id="svg-back" viewBox="0 0 320 540" class="w-full h-full drop-shadow-2xl hidden">
+            <g opacity="0.15" fill="#64748b">
+              <ellipse cx="160" cy="42" rx="22" ry="28" />
+              <rect x="150" y="68" width="20" height="18" rx="4" />
+              <path d="M125 85 Q160 88 195 85 L220 105 L230 195 L200 280 L188 380 L186 510 L168 510 L164 360 L156 360 L152 510 L134 510 L132 380 L120 280 L90 195 L100 105 Z" />
+            </g>
+            <g id="muscle-traps" class="muscle-part" onclick="selectMuscle('traps')">
+              <path d="M148 76 L172 76 L195 105 L160 138 L125 105 Z" fill="#f59e0b" fill-opacity="0.8" stroke="#fbbf24" stroke-width="1.2" />
+            </g>
+            <g id="muscle-delts-back" class="muscle-part" onclick="selectMuscle('shoulders')">
+              <path d="M110 108 C95 116 88 132 94 150 C98 153 108 146 114 134 C116 126 116 116 110 108 Z" fill="#f59e0b" fill-opacity="0.8" stroke="#fbbf24" stroke-width="1.2" />
+              <path d="M210 108 C225 116 232 132 226 150 C222 153 212 146 206 134 C204 126 204 116 210 108 Z" fill="#f59e0b" fill-opacity="0.8" stroke="#fbbf24" stroke-width="1.2" />
+            </g>
+            <g id="muscle-triceps" class="muscle-part" onclick="selectMuscle('triceps')">
+              <path d="M92 152 C84 168 85 192 94 205 C99 200 104 186 105 168 C104 156 98 150 92 152 Z" fill="#10b981" fill-opacity="0.85" stroke="#34d399" stroke-width="1.5" />
+              <path d="M228 152 C236 168 235 192 226 205 C221 200 216 186 215 168 C216 156 222 150 228 152 Z" fill="#10b981" fill-opacity="0.85" stroke="#34d399" stroke-width="1.5" />
+            </g>
+            <g id="muscle-lats" class="muscle-part" onclick="selectMuscle('back')">
+              <path d="M125 112 C115 140 116 175 125 210 C135 214 148 210 156 195 L156 142 Z" fill="#dc2626" fill-opacity="0.9" stroke="#f87171" stroke-width="1.5" />
+              <path d="M195 112 C205 140 204 175 195 210 C185 214 172 210 164 195 L164 142 Z" fill="#dc2626" fill-opacity="0.9" stroke="#f87171" stroke-width="1.5" />
+            </g>
+            <g id="muscle-glutes" class="muscle-part" onclick="selectMuscle('legs')">
+              <path d="M125 240 C122 265 125 285 140 295 C152 298 158 285 158 245 Z" fill="#b91c1c" fill-opacity="0.8" stroke="#ef4444" stroke-width="1.2" />
+              <path d="M195 240 C198 265 195 285 180 295 C168 298 162 285 162 245 Z" fill="#b91c1c" fill-opacity="0.8" stroke="#ef4444" stroke-width="1.2" />
+            </g>
+            <g id="muscle-hamstrings" class="muscle-part" onclick="selectMuscle('legs')">
+              <path d="M126 300 C120 325 122 360 130 375 C140 378 152 370 155 340 C157 320 156 300 156 300 Z" fill="#ef4444" fill-opacity="0.85" stroke="#f87171" stroke-width="1.2" />
+              <path d="M194 300 C200 325 198 360 190 375 C180 378 168 370 165 340 C163 320 164 300 164 300 Z" fill="#ef4444" fill-opacity="0.85" stroke="#f87171" stroke-width="1.2" />
+            </g>
+            <g id="muscle-calves-back" class="muscle-part" onclick="selectMuscle('calves')">
+              <path d="M126 395 C118 420 119 455 128 480 C136 485 148 480 150 450 C152 425 148 400 145 395 Z" fill="#10b981" fill-opacity="0.7" stroke="#34d399" stroke-width="1.2" />
+              <path d="M194 395 C202 420 201 455 192 480 C184 485 172 480 170 450 C168 425 172 400 175 395 Z" fill="#10b981" fill-opacity="0.7" stroke="#34d399" stroke-width="1.2" />
+            </g>
+          </svg>
+        </div>
+
+        <p class="text-[11px] text-slate-400 text-center mt-1">💡 Нажмите пальцем на любую мышцу на теле</p>
+      </div>
+
+      <!-- Detail Card -->
+      <div class="lg:col-span-7 space-y-4 sm:space-y-6">
+        <div id="detail-card" class="glass-card p-4 sm:p-6 rounded-2xl relative overflow-hidden transition-all duration-300">
+          <div id="detail-glow" class="absolute -right-10 -top-10 w-40 sm:w-48 h-40 sm:h-48 bg-red-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div>
+              <span id="detail-subtitle" class="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400">Ключевая группа</span>
+              <h2 id="detail-title" class="text-xl sm:text-2xl font-black text-white">Грудные мышцы (Пекторальные)</h2>
+            </div>
+            <div id="detail-badge" class="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs font-bold badge-record flex items-center gap-1.5">
+              <span>🔥 Бурный рост & Рекорды</span>
+            </div>
+          </div>
+
+          <p id="detail-desc" class="text-xs sm:text-sm text-slate-300 leading-relaxed mb-4 sm:mb-6">
+            За последние 3 тренировки грудной отдел постоянно растет. Рекорды в жиме гантелей (60 кг) и бабочке на фоне выхода энантата на рабочий уровень!
+          </p>
+
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-4 sm:mb-6">
+            <div class="p-2.5 sm:p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+              <div class="text-[10px] sm:text-[11px] text-slate-400 font-medium">Тоннаж</div>
+              <div id="metric-tonnage" class="text-base sm:text-lg font-bold text-white mono mt-0.5">10.44 т</div>
+              <div id="metric-sub-tonnage" class="text-[9px] sm:text-[10px] text-emerald-400">+0.69 т к прошлой</div>
+            </div>
+            <div class="p-2.5 sm:p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+              <div class="text-[10px] sm:text-[11px] text-slate-400 font-medium">Главный рекорд</div>
+              <div id="metric-pr" class="text-base sm:text-lg font-bold text-red-400 mono mt-0.5">60 кг × 10 × 4</div>
+              <div id="metric-sub-pr" class="text-[9px] sm:text-[10px] text-slate-400">Жим гантелей (14.09)</div>
+            </div>
+            <div class="p-2.5 sm:p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+              <div class="text-[10px] sm:text-[11px] text-slate-400 font-medium">База (Жим)</div>
+              <div id="metric-base" class="text-base sm:text-lg font-bold text-white mono mt-0.5">100 кг × 6</div>
+              <div id="metric-sub-base" class="text-[9px] sm:text-[10px] text-slate-400">Пик 24.08 / 95×6</div>
+            </div>
+            <div class="p-2.5 sm:p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+              <div class="text-[10px] sm:text-[11px] text-slate-400 font-medium">Статус</div>
+              <div id="metric-status" class="text-base sm:text-lg font-bold text-emerald-400 mt-0.5">Рост +8%</div>
+              <div id="metric-sub-status" class="text-[9px] sm:text-[10px] text-slate-400">Плотность сетов</div>
+            </div>
+          </div>
+
+          <h3 class="text-[11px] sm:text-xs uppercase font-bold tracking-wider text-slate-400 mb-2.5">Упражнения в группе:</h3>
+          <div id="detail-exercises" class="space-y-2"></div>
+
+          <div class="mt-4 sm:mt-6 p-3 sm:p-4 rounded-xl bg-gradient-to-r from-cyan-950/40 to-slate-900/70 border border-cyan-500/20 flex items-start gap-2.5">
+            <span class="text-lg sm:text-xl">🎯</span>
+            <div>
+              <div class="text-[11px] sm:text-xs font-bold text-cyan-300 uppercase tracking-wider">Следующая цель</div>
+              <p id="detail-target" class="text-xs text-slate-300 mt-0.5">
+                Жим 100 кг × 6 или 95 кг × 8, добавить 5-й рабочий сет в гантелях (60×10×5).
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Switchers -->
+        <div class="grid grid-cols-3 sm:grid-cols-5 gap-1.5 sm:gap-2">
+          <button onclick="selectMuscle('chest')" class="p-2 rounded-xl text-center glass-card hover:border-red-500/50 transition active:scale-95">
+            <div class="text-[11px] font-bold text-white">Грудь</div>
+            <div class="text-[9px] sm:text-[10px] text-red-400 font-semibold">🔥 Рекорд</div>
+          </button>
+          <button onclick="selectMuscle('triceps')" class="p-2 rounded-xl text-center glass-card hover:border-emerald-500/50 transition active:scale-95">
+            <div class="text-[11px] font-bold text-white">Трицепс</div>
+            <div class="text-[9px] sm:text-[10px] text-emerald-400 font-semibold">+65% на тросе</div>
+          </button>
+          <button onclick="selectMuscle('back')" class="p-2 rounded-xl text-center glass-card hover:border-red-500/50 transition active:scale-95">
+            <div class="text-[11px] font-bold text-white">Спина</div>
+            <div class="text-[9px] sm:text-[10px] text-red-400 font-semibold">🏆 10.25 т</div>
+          </button>
+          <button onclick="selectMuscle('legs')" class="p-2 rounded-xl text-center glass-card hover:border-red-500/50 transition active:scale-95">
+            <div class="text-[11px] font-bold text-white">Ноги</div>
+            <div class="text-[9px] sm:text-[10px] text-red-400 font-semibold">⚡ 16.89 т</div>
+          </button>
+          <button onclick="selectMuscle('shoulders')" class="p-2 rounded-xl text-center glass-card hover:border-amber-500/50 transition active:scale-95">
+            <div class="text-[11px] font-bold text-white">Плечи</div>
+            <div class="text-[9px] sm:text-[10px] text-amber-400 font-semibold">В сплите</div>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: PHARMA PROTOCOL & ENANTHATE -->
+    <div id="tab-pharma" class="space-y-4 sm:space-y-6 hidden">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4">
+        <div class="glass-card p-3.5 sm:p-5 rounded-2xl border-purple-500/30 bg-gradient-to-br from-purple-950/40 to-slate-900/80">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] sm:text-xs uppercase font-bold tracking-wider text-purple-300">Препарат</span>
+            <span>🧪</span>
+          </div>
+          <div class="text-base sm:text-xl font-black text-white mt-1.5">Тестостерон Энантат</div>
+          <div class="text-[10px] text-purple-300 mt-0.5">T½ ~ 4.5–5 дней</div>
+        </div>
+
+        <div class="glass-card p-3.5 sm:p-5 rounded-2xl border-slate-800">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] sm:text-xs uppercase font-bold tracking-wider text-slate-400">Дозировка</span>
+            <span>💉</span>
+          </div>
+          <div class="text-base sm:text-xl font-black text-white mt-1.5 mono">125 мг × 2</div>
+          <div class="text-[10px] sm:text-xs text-emerald-400 mt-0.5 font-semibold">250 мг в неделю</div>
+        </div>
+
+        <div class="glass-card p-3.5 sm:p-5 rounded-2xl border-slate-800">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] sm:text-xs uppercase font-bold tracking-wider text-slate-400">Инъекции</span>
+            <span>📈</span>
+          </div>
+          <div class="flex items-baseline gap-1.5 mt-1.5">
+            <span id="card-injections" class="text-xl sm:text-2xl font-black text-white mono">—</span>
+            <span class="text-xs text-slate-400">уколов</span>
+          </div>
+          <div id="card-total-mg" class="text-[10px] text-cyan-400 mt-0.5 font-semibold">Введено: — мг</div>
+        </div>
+
+        <div class="glass-card p-3.5 sm:p-5 rounded-2xl border-emerald-500/30 bg-emerald-950/15">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] sm:text-xs uppercase font-bold tracking-wider text-emerald-400">Статус</span>
+            <span>⚡</span>
+          </div>
+          <div class="text-base sm:text-xl font-black text-emerald-300 mt-1.5">Steady State 🚀</div>
+          <div class="text-[10px] text-slate-300 mt-0.5">Выход на равновесие</div>
+        </div>
+      </div>
+
+      <!-- Curve Chart -->
+      <div class="glass-card p-4 sm:p-6 rounded-2xl">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] sm:text-xs px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold">
+                Pharmacokinetics
+              </span>
+              <span class="text-[11px] text-slate-400">Период полувыведения: ~4.5 дней</span>
+            </div>
+            <h3 class="text-base sm:text-lg font-bold text-white mt-1">Кривая накопления тестостерона в крови</h3>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button onclick="logInjection()" class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-purple-600/30 transition">
+              <span>💉 Отметить укол №<span id="next-inj-num">6</span></span>
+            </button>
+          </div>
+        </div>
+
+        <div class="w-full h-56 sm:h-72 relative pt-2">
+          <svg viewBox="0 0 600 240" class="w-full h-full overflow-visible">
+            <line x1="50" y1="30" x2="570" y2="30" stroke="#1e293b" stroke-dasharray="4" />
+            <text x="40" y="34" font-size="10" fill="#64748b" text-anchor="end">Пик</text>
+            <line x1="50" y1="80" x2="570" y2="80" stroke="#1e293b" stroke-dasharray="4" />
+            <text x="40" y="84" font-size="10" fill="#64748b" text-anchor="end">75%</text>
+            <line x1="50" y1="130" x2="570" y2="130" stroke="#1e293b" stroke-dasharray="4" />
+            <text x="40" y="134" font-size="10" fill="#64748b" text-anchor="end">50%</text>
+            <line x1="50" y1="180" x2="570" y2="180" stroke="#1e293b" stroke-dasharray="4" />
+            <text x="40" y="184" font-size="10" fill="#64748b" text-anchor="end">25%</text>
+
+            <rect x="360" y="35" width="210" height="45" rx="6" fill="#a855f7" fill-opacity="0.08" stroke="#a855f7" stroke-dasharray="3" stroke-width="1" />
+            <text x="465" y="55" font-size="10" font-weight="bold" fill="#c084fc" text-anchor="middle">Зона равновесия (Steady State)</text>
+
+            <defs>
+              <linearGradient id="pharmaGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#a855f7" stop-opacity="0.45" />
+                <stop offset="100%" stop-color="#a855f7" stop-opacity="0.0" />
+              </linearGradient>
+            </defs>
+
+            <path d="M 60 200 C 70 180, 80 145, 90 142 C 110 150, 125 165, 135 168 C 145 140, 160 110, 175 108 C 195 118, 210 135, 220 137 C 230 110, 245 85, 260 83 C 280 92, 295 110, 305 112 C 315 88, 330 68, 345 66 C 365 75, 380 88, 390 90 C 400 68, 415 50, 430 48 L 430 200 Z" fill="url(#pharmaGrad)" />
+            <path d="M 60 200 C 70 180, 80 145, 90 142 C 110 150, 125 165, 135 168 C 145 140, 160 110, 175 108 C 195 118, 210 135, 220 137 C 230 110, 245 85, 260 83 C 280 92, 295 110, 305 112 C 315 88, 330 68, 345 66 C 365 75, 380 88, 390 90 C 400 68, 415 50, 430 48" fill="none" stroke="#c084fc" stroke-width="3.5" stroke-linecap="round" />
+            <path d="M 430 48 C 450 60, 465 72, 475 74 C 485 55, 500 48, 515 48 C 535 58, 550 68, 560 70" fill="none" stroke="#a855f7" stroke-width="2.5" stroke-dasharray="4" />
+
+            <circle cx="90" cy="142" r="4" fill="#ffffff" stroke="#a855f7" stroke-width="2" />
+            <text x="90" y="215" font-size="10" fill="#94a3b8" text-anchor="middle">Укол 1</text>
+            <circle cx="175" cy="108" r="4" fill="#ffffff" stroke="#a855f7" stroke-width="2" />
+            <text x="175" y="215" font-size="10" fill="#94a3b8" text-anchor="middle">Укол 2</text>
+            <circle cx="260" cy="83" r="4" fill="#ffffff" stroke="#a855f7" stroke-width="2" />
+            <text x="260" y="215" font-size="10" fill="#94a3b8" text-anchor="middle">Укол 3</text>
+            <circle cx="345" cy="66" r="4" fill="#ffffff" stroke="#a855f7" stroke-width="2" />
+            <text x="345" y="215" font-size="10" fill="#94a3b8" text-anchor="middle">Укол 4</text>
+            <circle cx="430" cy="48" r="6" fill="#10b981" stroke="#ffffff" stroke-width="2.5" />
+            <text x="430" y="34" font-size="11" font-weight="bold" fill="#34d399" text-anchor="middle">Укол 5 🔥</text>
+            <text x="430" y="215" font-size="10" font-weight="bold" fill="#c084fc" text-anchor="middle">14.09</text>
+            <circle cx="515" cy="48" r="4" fill="#334155" stroke="#94a3b8" stroke-width="1.5" />
+            <text x="515" y="215" font-size="10" fill="#64748b" text-anchor="middle">Укол 6</text>
+          </svg>
+        </div>
+
+        <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-2.5 sm:gap-3 text-xs">
+          <div class="p-3 bg-slate-900/70 rounded-xl border border-slate-800">
+            🧬 <b class="text-white">Синхрон с рекордами:</b>
+            <p class="text-slate-400 mt-1">4–5 инъекций привели к пиковому насыщению крови. Отсюда взрыв в жиме гантелей (60 кг) и бабочке.</p>
+          </div>
+          <div class="p-3 bg-slate-900/70 rounded-xl border border-slate-800">
+            💧 <b class="text-white">Вес +2.0 кг:</b>
+            <p class="text-slate-400 mt-1">Комбинация гликогена, гидратации и активного синтеза мышечного белка.</p>
+          </div>
+          <div class="p-3 bg-slate-900/70 rounded-xl border border-slate-800">
+            ⏱️ <b class="text-white">Схема 125 мг × 2:</b>
+            <p class="text-slate-400 mt-1">Идеально ровный гормональный фон без резких скачков эстрадиола.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: CHARTS (DYNAMIC) -->
+    <div id="tab-charts" class="space-y-4 sm:space-y-6 hidden">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        <!-- Chest Tonnage Chart -->
+        <div class="glass-card p-4 sm:p-6 rounded-2xl">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h3 class="text-sm sm:text-base font-bold text-white">Динамика тоннажа груди</h3>
+              <p class="text-[10px] sm:text-xs text-slate-400">Тоннаж (тонн) по датам</p>
+            </div>
+            <span id="chart-tonnage-tag" class="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">+1.15 т</span>
+          </div>
+
+          <div id="chart-tonnage-container" class="w-full h-56 sm:h-64 relative pt-2">
+            <!-- Dynamic SVG injected via JS -->
+          </div>
+        </div>
+
+        <!-- Weight Growth Chart -->
+        <div class="glass-card p-4 sm:p-6 rounded-2xl">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h3 class="text-sm sm:text-base font-bold text-white">Вес тела (гипертрофия)</h3>
+              <p class="text-[10px] sm:text-xs text-slate-400">Вес атлета (кг)</p>
+            </div>
+            <span id="chart-weight-tag" class="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-semibold">+2.00 кг</span>
+          </div>
+
+          <div id="chart-weight-container" class="w-full h-56 sm:h-64 relative pt-2">
+            <!-- Dynamic SVG injected via JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Split Comparison -->
+      <div class="glass-card p-4 sm:p-6 rounded-2xl">
+        <h3 class="text-sm sm:text-base font-bold text-white mb-3">Сравнение мощности по сплитам (Тоннаж)</h3>
+        <div class="space-y-3 text-xs">
+          <div>
+            <div class="flex justify-between font-semibold mb-1">
+              <span class="text-white">Ноги + Плечи (04.09)</span>
+              <span class="mono text-red-400 font-bold">16.89 т (Топ 1)</span>
+            </div>
+            <div class="w-full h-3 bg-slate-800 rounded-full overflow-hidden">
+              <div class="h-full bg-gradient-to-r from-red-600 to-orange-500 rounded-full" style="width: 100%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between font-semibold mb-1">
+              <span class="text-white">Грудь + Трицепс</span>
+              <span id="split-chest-tonnage" class="mono text-cyan-300 font-bold">— т</span>
+            </div>
+            <div class="w-full h-3 bg-slate-800 rounded-full overflow-hidden">
+              <div id="split-chest-bar" class="h-full bg-gradient-to-r from-cyan-600 to-blue-500 rounded-full" style="width: 61.8%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between font-semibold mb-1">
+              <span class="text-white">Спина + Бицепс (09.09)</span>
+              <span class="mono text-emerald-300 font-bold">10.25 т (Рекорд)</span>
+            </div>
+            <div class="w-full h-3 bg-slate-800 rounded-full overflow-hidden">
+              <div class="h-full bg-gradient-to-r from-emerald-600 to-teal-500 rounded-full" style="width: 60.7%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: TABLE & DATA INPUT -->
+    <div id="tab-table" class="glass-card p-4 sm:p-6 rounded-2xl hidden space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h3 class="text-base sm:text-lg font-bold text-white">Журнал тренировок: Грудь + Трицепс</h3>
+          <p class="text-xs text-slate-400">Все данные сохраняются прямо в память устройства</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="openAddModal()" class="px-3 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 active:scale-95 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-cyan-500/20 transition">
+            <span>➕</span> Записать тренировку
+          </button>
+          <button onclick="exportData()" title="Резервная копия данных" class="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 text-xs flex items-center gap-1 border border-slate-700 transition">
+            <span>📥</span> Экспорт
+          </button>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto no-scrollbar rounded-xl border border-slate-800/80">
+        <table class="w-full text-left text-xs">
+          <thead class="uppercase bg-slate-900/90 text-slate-400 border-b border-slate-800">
+            <tr>
+              <th class="py-2.5 px-3">Дата</th>
+              <th class="py-2.5 px-3">Тоннаж</th>
+              <th class="py-2.5 px-3">Вес</th>
+              <th class="py-2.5 px-3">Жим лёжа</th>
+              <th class="py-2.5 px-3">Гантели</th>
+              <th class="py-2.5 px-3">Бабочка</th>
+              <th class="py-2.5 px-3">Франц.</th>
+              <th class="py-2.5 px-3">Трос</th>
+              <th class="py-2.5 px-2 text-center">Действие</th>
+            </tr>
+          </thead>
+          <tbody id="workouts-tbody" class="divide-y divide-slate-800/60 font-mono text-[11px] text-slate-300">
+            <!-- Dynamic rows injected here -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="text-[11px] text-slate-400 flex items-center gap-1.5">
+        <span>💡</span> Новые тренировки мгновенно перерисовывают графики и обновляют показатели веса и рекордов!
+      </div>
+    </div>
+
+    <!-- TAB 5: GOALS -->
+    <div id="tab-goals" class="glass-card p-4 sm:p-6 rounded-2xl hidden space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-base sm:text-lg font-bold text-white">План на следующую тренировку (~21.09)</h3>
+          <p class="text-xs text-slate-400">Цель: 11+ тонн</p>
+        </div>
+        <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
+          11+ т
+        </span>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 flex items-start gap-3">
+          <div class="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold shrink-0">1</div>
+          <div>
+            <div class="text-[10px] text-slate-400 uppercase font-semibold">Жим лёжа</div>
+            <div class="text-sm sm:text-base font-bold text-white">100 кг × 6 или 95 кг × 8</div>
+            <p class="text-[11px] text-slate-400 mt-0.5">Вернуть пик 100 кг либо поставить рекорд объема с 95 кг.</p>
+          </div>
+        </div>
+
+        <div class="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 flex items-start gap-3">
+          <div class="w-8 h-8 rounded-lg bg-red-500/20 text-red-400 flex items-center justify-center font-bold shrink-0">2</div>
+          <div>
+            <div class="text-[10px] text-slate-400 uppercase font-semibold">Жим гантелей</div>
+            <div class="text-sm sm:text-base font-bold text-white">60 кг × 10 × 5 сетов</div>
+            <p class="text-[11px] text-slate-400 mt-0.5">Добавить 5-й рабочий подход (+600 кг тоннажа).</p>
+          </div>
+        </div>
+
+        <div class="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 flex items-start gap-3">
+          <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold shrink-0">3</div>
+          <div>
+            <div class="text-[10px] text-slate-400 uppercase font-semibold">Бабочка (Pec-Deck)</div>
+            <div class="text-sm sm:text-base font-bold text-white">45,5 кг × 12 × 5 сетов</div>
+            <p class="text-[11px] text-slate-400 mt-0.5">Максимальная изоляция и памп грудных.</p>
+          </div>
+        </div>
+
+        <div class="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 flex items-start gap-3">
+          <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold shrink-0">4</div>
+          <div>
+            <div class="text-[10px] text-slate-400 uppercase font-semibold">Трицепс трос</div>
+            <div class="text-sm sm:text-base font-bold text-white">45,5 кг × 10 × 4</div>
+            <p class="text-[11px] text-slate-400 mt-0.5">Закрепить рабочий вес на 10 чистых повторений.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MODAL: ADD WORKOUT FORM -->
+  <div id="modal-add" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md hidden">
+    <div class="glass-card w-full max-w-lg p-5 sm:p-6 rounded-2xl border border-cyan-500/40 shadow-2xl relative max-h-[92vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <h3 class="text-base sm:text-lg font-black text-white flex items-center gap-2">
+          <span>➕</span> Записать новую тренировку
+        </h3>
+        <button onclick="closeAddModal()" class="w-7 h-7 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center font-bold text-sm">
+          ✕
+        </button>
+      </div>
+
+      <form id="form-workout" onsubmit="saveNewWorkout(event)" class="mt-4 space-y-3.5 text-xs">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-400 font-semibold mb-1">Дата тренировки</label>
+            <input type="text" id="inp-date" required placeholder="например, 21.09" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono focus:border-cyan-400 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-slate-400 font-semibold mb-1">Вес тела (кг)</label>
+            <input type="number" step="0.05" id="inp-weight" placeholder="например, 90.5" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono focus:border-cyan-400 focus:outline-none" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-400 font-semibold mb-1">Тоннаж (тонн)</label>
+            <input type="number" step="0.01" id="inp-tonnage" required placeholder="например, 11.20" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-cyan-300 font-bold font-mono focus:border-cyan-400 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-slate-400 font-semibold mb-1">Жим лёжа (пик)</label>
+            <input type="text" id="inp-bench" placeholder="например, 100 × 6" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono focus:border-cyan-400 focus:outline-none" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-400 font-semibold mb-1">Жим гантелей</label>
+            <input type="text" id="inp-db" placeholder="например, 60 × 10 × 5" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono focus:border-cyan-400 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-slate-400 font-semibold mb-1">Бабочка (Pec-Deck)</label>
+            <input type="text" id="inp-butterfly" placeholder="например, 45,5 × 12 × 5" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono focus:border-cyan-400 focus:outline-none" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-400 font-semibold mb-1">Французский жим</label>
+            <input type="text" id="inp-french" placeholder="например, 32 × 10 × 4" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono focus:border-cyan-400 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-slate-400 font-semibold mb-1">Трос на трицепс</label>
+            <input type="text" id="inp-cable" placeholder="например, 45,5 × 10 × 4" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono focus:border-cyan-400 focus:outline-none" />
+          </div>
+        </div>
+
+        <div class="pt-3 flex items-center justify-end gap-2 border-t border-slate-800">
+          <button type="button" onclick="closeAddModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-medium hover:bg-slate-700 transition">
+            Отмена
+          </button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 active:scale-95 text-slate-950 font-bold transition shadow-lg shadow-cyan-500/20">
+            Сохранить тренировку
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+        // ENCRYPTED DATA VAULT (AES-256-GCM, Master Key: PIN)
+    const ENCRYPTED_VAULT = {"saltHex":"6174686c657469635f69726f6e5f7365637265745f","ivHex":"2ad66d8de26464bd089cea56","tagHex":"4d6ad16a1eae374695a726ea4070c9d7","dataHex":"7d928a37339cee89fea1575676dd786055f6904b830b9f61b0084d7ed3db9d84599bc1b696671420041631abe4af85edfacac85895fc438047d3c1f251eb93a3cae97d2d51337732768d3a48ee093720e117e73ad257c2e6684e797a4a72450c55d9ee1a1d601654f4077c6d150a5f0de24e64d55a2fe7d70e536116b807d776c1fd3e799f6fba1e3f07668b63ea8e5f17dd6a8211d2a9327def6eb607eb0187d784789dcdd6c3aaf5540c5ab2e5b72a28a72b570847aa0919d9e5cfa149ba26b5afc5dc17d883effc2e40658f3b7bce50e4842b93dc6284158367e1af552fff6c480350daa5ef4f4b23774b59e08537da6f568ef0dcc7c2a235b5af4d8a15da87baf8d92adbae98d2ba784cb22ff00e89680de2a6fcbc0e088ef54e6efcd60f13786ea9b3f0533505d5240ec35b0109fff428f1eef61016133815866a584a0efb6b545ef70881df469e08973df7973c82b4e80545355912e5d437ef6b7dbefaa1ccf69077e5cb98789ff6b53a53bcf02bc6c1a2254830d8a4839999e5d5a03a2cb1296658373c940cc9a7bb57ebbe1f748d88f781c8be284eee345783a121f3e1ecd1c08749c563f7627f315c046ef234a079076655d101703864fdde02418fee983e74577c0e3b056d6b1dc3fb0f50866c49876a97058aaddef0d813f64b03e544cf7b3cf7017c0ba2cbe90533b9a0b1c1515175bb56d2f5224dad09c201529d38216c415bee608271e0bd291ee1f7f1b3913a967a6d70482a099520790f2ba950bd27e84a84bbe02d57983e9447db9806daf112ff59441cda2da96a689c1806867775ba40153947d0529acc636cac537883efcb317eb5d78814714797955dadfe92f25a8405df9d6a37546d514d2317532783ec205b5a063723a46d453e75b43c374e27bb696df3b510640d3103cb7baf9567dbbf93088ab3a82c08af7f52036e1eac1090cf70196167165aad994ac299d64e1a252d1a43c577bf98d918175a21168f4ba4323172e91b5dfeea1bf8ebf1d07d4cedebd3f3c2ac6ce639ec5b51b9bce07b68f8f7414854acf7126ad7714ea9b5c778ac6d181db72fc245175aecea999ccfa084686fab54f46549d235f10fb9dcd0e8faf523a1e129271246d95276eca61463db6816901123ad694ce3cf5f4128dc122404e4dbd3fe7f03094d8fa58a00daccdb9fe53063bd21f3cbc821cde1c140c062d8908a739799e3b714e85727b35a8afe9e1b91fc80c959c0e0e6043f5d513673e75208a194e90cf2fa96bf2b5f88a3c7dc1c84bae75f45598a3dc0072a4c561ca8ea31150233566c0ae942b6127ba0013f911f1ad5320a128acdef3075435c2b08e88542ed9a5ce70d4af267075694c0fb94f179d412ff5cc8807aca6fbba6046c4f25f6d2b0975b5350a97c219be755b2cda8e92202821e677a93ce5d2bcf81772bc90c50c9e3aaed2ccd9052b08b0d6aef979ffba5eb4248f7cf0b77cc9cc3799b04e0ac8152516f4ec59f5695b9a2939e65c00d57f00ca60fba2e9234a5a0fefb5b246d703b284140643ea82a6678fd6f26e75b26ddda4bd87590f3f684d21b10bb5d6fe12de9c61f1598eb156f1e73b00c0c877d6348477ff6a113d1e8402fe157f4b6f9510b7c441d09a96066ad39679ff249708ae2201e8f9da8fc1136c7c7e6dfe5872e75a8a0c2c9326eef438f22b3d15ff20aae5fe21884b09c9e7b38efdd38a2255d7a78cf14ca1d2a1019289f45f87449c08d28476ac2d372592fb785e0459168c82d890188333e7c27358f5bcfabbba758368334022408de9edf44b39c34dde9409ad8489cd6135637567d90cebec84c4420dd2f22896c0af9cbdb74162ccb976b6e0b6466a58e6ec603e68283365d79403653b04aced35c593aa7b9a58ba99e8da148e480d8d49adb343a10b8340d3ac241408557e424211e453b31bf3d5d178e5235887f73a5471958f40e22530ca1b2c604a1724ae2262ad79b0369175e58e16c0b6f1dbbb9b05874869b643818377c3936b9460839ae64971e80c1112e26f1ff938fc5be6d2bdafd0253f5ba6c662d35007d18118b6698c9e5411fce01bfb02348e17206dc160e69e13f84631f4e8bbc70185d8b975a8a9aedf38cad11da1906e0d78e90288399413f8c1fc37ad8f3014ae47bdc17d2f14d949ee5657d35447321a22335833fe56da2132bb5652654e3f4c4b27704e75d0539821fbd3efcbcbb65c55c21c9033833af663ccef81e6fb072cc11333eb00b92b5ea5661b9bd0749fb64c6244407c479e7c5040be39a547fd3ad9a8997b240805231a119c44e6cab4a824bf7bc1f67d0d2bfecc2055b965169c6d097013f479bff993722059ca491d5721e3c630c12aba291124c443af88ca3606c0ffbb2d280457cc7c0090d601ad169abd7439326aff533b3f9ca14a8b74136837f8d96316ef722a9bdeda66de0a0218da5922f90b16e9cbcd16779a7369ab32dd6d0d28853b04a01ccb747683429d431483fc581993d496bbdbd10660d533ed8a11ee8d968d97b4031c28de6a10df6d30750288d2ef8e270c8d377c25dd31c91e92e36cd94dfe1f92433461727b4182a551d5e22b75e6c797f05d7ddc6901b297e942dbb49d66bd232bd5b8c41f8e8f49aa37e4bee09f6a9cc8f9a635da5fd0151db91dffbe607ea2e096b638a70d64c4c02cb49175de813bc236a1bfbc5224811e91279f1d0e7a40f56128fb32c8ce4a162a72d3073a238bc602df9515c524ef4c703aaa3ce1bf780e56de54f36d9db040615d68665f3eaf079b8601661445f530d7eac14e9a745121a5cb2702b9719b0600422035524e3a1bdcd9b7fc315a8e2b286b8c23da86280d6ab7f0370c9447a50a4f86fc23c2ab062db801e3d21101a79eb10064d8ac417794280a9b5b6f49d095783e1e73b290205a1cf3511b0164ed0eefa883755b27493cc7e5e6f15864e1dec1e764c8601124a16a0a02151ccdfea1a875c3e4825e5567116eb3a117fb19b853f2b0dc843225ba2eb47b6b54948d5c29aea61547c68b629d2ba0ea11bfd6b65f82a96ee7d86323cff1d566083a22268246628fe2a78f4b06ccc36a90ac06c0138602c1f3fbb2e8ec3e78c5ddfc3c1010806dde0e5f251408b28d6e3c263a848ac14d36d35d7aba22971cb3073876663ed37a5223e5c8c92dd635f6900bf0c3a5c5aeba517ebc46ac0d98feb6acfe1990e121948f6fced3cbd987ada1c735a615f60ecf08d97626fc8ef55cef3ade6156d8237d59aa6cdc626dbecda6577512f1f74b54924b0835dfb47e342d2d55a03f12fffd2abbfcccf5d97bab56a567e8f0160e36006ddab3e1fe3eac13008ec03f8383d6caf01536c2e5bd83dd34dc4072da6d17736e459ac18016d796f2b570908e1e215f98b4e837bcbed845f3b5ea40c36ec50d067cfce2c6d8469ba460bb594811d84e354b7da84673f4fb52bbdddac36760a4d986334491fcaca48e233494a525ebe94910edd1e1fe7df0eea54d7124f3774bd91a68e36c57e8b331adb28c53eb3e637611790c60b85d31ef9fd818e4083be652f8f7c3b73221f05b36124409dbcb1fe5e1bf843a5bc2a273306e8be6188fdcdec0fa0d99da7c8e2515e124441ea84791d6ebc131a927515f4c982c921061801ae33c88f46aacd21ab432821caf37835153b121a6d6f40f7fe1b4b5908ca807ce35b54d47379242b165d447a9aadf234f805499cd021db82a1739da50a237929e127fc73793a49747c4d8cbec5cb3ee801765e3c0433bc4a0d1ab40cf2d59c635e221c28021ede950f12031e32781daf624e711ce6ec5e08f59f2d855792cd1611a1e28c651116978ae04398e42cc29737c0c89e07d6e4eb51a81658287a0b36c002bedabdaa783cdff1db8987d8545eca86cc835241fb648aab00b554a769fc1f507de187dd8ed4de66dc96b14db9c4377853088b9986088699c5204319d06fbbb695cd4fe56896448ad11b60a2e5618a0a5b105983a6e74bbf09858bc7c745653feea50ea8e0e2e1b8224a9db565f3c425451023de23b867c2a858d238ad267fcb16b785bf188aa4fa6a3eedce366b672a776ecf9292de0a95eaf5b46830b7597e3747f004fad2bd71b124a1edd31b393af45053d502acbae8cb48a54d02abe6f348cc6a79dcef7abc1482fcc0fc5b4aaf89a44910bc17707149568ad952a9231412d222efbfd8de74aba61a99d11c392b32de4f66a09488493b0c9b951899444353cb83b41fe46307deed1b4c2d53c209ba1e1413ab11843c0233771c66ba59f901e8c20f4bb2284a622676eefa47ac95c748a2a46ca96ea605c9ae9a4096e14a030ae8ca37d461d4b7eba00083b24234befa4d8baefd71a7a0d8b17c37eaedbbf509f7d31371b45deaab3d7c79c0a52134965a592c12f1785d4a0b058c656110f91a8cfda97ea7e30365e1a7e17325b19595cd058c6cb5a7e6a931f9bb3e9280083052bc0b25038e95f1e80d1c5eda69bcd6b77eed0f31b37766add8aa0725d0f057e5bf8bb4db1cef08fe4048aa7f1f7edfbe5cb8a977fea738047dc8fafc8c36c13e96158da4534538e65b5ddbb977c6a66c2d35a032e8aa721ed6f5d8b78eb55a29158b1b55fff2f318f82d80eb31d1c324aedf477085526a216ad05f10baeeb01d13130eb89d4e6074dd4e642a7d6876e10090ab1483e5d5ca5a8a35723d4bf7e319cbcd8b37393352a1e1681dc25b22e0cb8866fba63dedb46df9694dcde21e456b4abc887239ff0719d7504ab632cebe87fe47a223881e5866467e4cc1dc2bfdfb5713c696512b10ab130d568ab92b6e9b8f44065684e72e63282c4a150ea298b307828b51db9f2be3637aa95c3786b7f1a0d5abe3507c0bf2688d65ebabd0e059a4a02b9c30c1dae8e919f8319cec362d8bb689437303bae49b06133f3c2a4b694b26ffa664df18722555b16daabfea9efde8a05bb37726be4d82a31a3618567924858ec6cc37aab4687c6471e6f783410296a546a12a1c377f6c94b21d2bf8f0b57e79bdf52f501b5e9aea98427df8f861f87ed85d018954d01a9413f9a3c2fb2dd4e529f268547c8f75b5d6df36746c5673ce0fb57d53b4f82df7f0d820f733ec3a2f52df91734b56fbcdc0f2a5e9164b371c2e70eada9747d858fd4ebb6d7618bcb43d716a91788f9efa7bcf312413b96484c2db554d0dcd34582c4fc7cead87e8209bb672255a2a010c7ac0bb03e82b12cdb061a829a6683d2ec8510b2962c64971103d4e5d5ac6dfc501a6842347f498704aa955637e7cb6e5de09a2f3a23bf558c89f2276b68095c489c503a11e7f9eb68f04aa07b3e0377232cb8520cbbfc29a8b6ec4fd8871ba9299aea15a56476751cee1f933171d6378e217b7918ba138483a66c5f00c41ab2799b01b028a217a07f46afd6505435ec18acf9c2e4e5910466ac7779cf84004e2f4a2636216b56501b05d8c3fda4f735988e13193015c622c9363c999166479a6ffea4859ec15e3ffddeeeb01a0608acdaf03532acb9ec1f0546127747327ff5ddadac4ab4a507fe9aeea38e4fe6f99a8591340ace55a091f5e5c9dadb3506673e437ce5df79f18992525189a8ec8d43671de7d52d55842d3e724cb802e22d2353a91bf5b5588f5a9449513554dfff03a05969d141f7b4d66d6f292713c68eb67404aad408f8f1a2d76858465983438888d1fd25a592ca4dad9c824b2487db3c0ea75aca8ad7ff871c3e38cf968ddd42b88cd704223b05f761e6b5730cb269f5b121b379e7d323b268688a179e9644a7a69e83492f3528f9bbe35960efe69a3b3a44ae3bddf4f3d79a9feb6026011ca9e29df8757448a08d07f5275f0aad25260ae9768ed91ce9d65695a068b99a070f1d1b1bbb6b127e42d1d67a32959a645b5051ac036d2c6e074a3a5c8b4b8e2ccfe0b9760ab61a16d00c8eb31039325db1252227be8c18ea8868f297d6a73f46cc708cac7b1aef3b6b9391127f340456b79fd5858f68b2a6562d78e4a8d25bca69b84245800d6aa157201d698639024269c6d0d804328c966c0e9ecda7a11ba3770f5ac21feebbfecde0415a4c22a269ae77b46badef52936238824b20f19ea0f539ccece56e34b065bdf8beb45fb1b02021375c17a5fc2017b4e001beba9e39c832e591f5804757ac5875c8b423f0e5ec9aff18ffd5681b0750449b1a2edd07450f4fa27c5bf62b6b5d1abc28494cbb6dd2b2bb9f6952caed47340999fde3138241eeab6e965480bf7e55ab132543f2bc144c397d1bbce3abc63627992a4ccefce246bd501aa7751e7f7f5218ce6e8d0271cc9a814f3bf50bdf9e51adfb4fab2b27322c03274b6d30f80b27ae15700db1a0a9d5abe21438cf16983229c4fc90f09f333ab1ea4e5bbcdc78a6fe7497488fed48bf933030c8adaab43c322fec640debddc0f9b24cc105d7479a23ba0746f69168b10eeb6e6ee8a63d9df3b2028bb2f15ea10c8a51545e368d58c5c28e650490844bf349b47f4518e29b2a288ddd79fd69717bd50c0513438ffca96538a74cb907dcf6229f7f8578527923810b67402cc09517d93f2f7a1a8242c66db6b239e7030a33765985b64e0c05d7a45d94eb8161ecf4a0a5f02d8cc5abd4c0a21309ca31cc9dd3d56d00529131a4b92ef5723edb09c73a687faeae3f528e842195cf8586a0e743af68620e84a74807cc56ec345746e06b56e264f26b5f166640d0b2a868e9c7f635b4760de393a1365cc07cfb196089499f8a8fc3ab79d71fe96f36826599c6e47af75605dc361a3d8a15057d253ec0fa99b95ca2f47447fe3c202b4f3a5b86a7f3a1eea5f82f87e71b37aaa05f6a7ed56d25740f1699d403201276e3734e38dc757404895e777270843e1041b2c9a08828218ee5a3ee6f83a8aa1123f75a01b43762fcc64bcbed3434c8797f1b6b04e03ea7f4465efb902bcef97e676f0c15dacfc269bb3d909cc26f3f67c1bcd4da903a7e7cacb4e77cb1e6f14d252da63efc859082426fa22f722eec89ca1b8da4cb96503649709a601756998afe510415ef0cb21a74094bd87634ca3084610466ec02cf4b90f2e4f8da9418be34a395ea8573b8011710092991fbfecfd46b8e993b03ddd457920be0b284b4501026f38732ecfbb8241c08b0987f7578b0768163b71dd400301267cfcd26fc3383351e9a758acdb342158221297d6f854d2c0cf92ebe5bdcb918382ec6ce20038f754938a2e7592c3b3201ec8bddcc1117e3a710c2400ff21319a4c4798af7b2edaccd5b84012e50f87fa50690bc619d8d0c4d89e626a59e6a35c8731e43bc9b0483bbdc5f877155e05527862b31ccb8a5d51b29d9210c11118bec7cc594de70493d6fdd0cb3f5cda10e500c89d1fafae2daa394009479fd9238b982c8e9d429f44f17da8bc940200269bf205f861f910157f255086d37c2625bceb586f617f1ce5aab85eccd922c43897a77081ec0d4fe03babb320bd4c95732ef90d80ab3088ceba00f9a5855fc77eb4336bccef76df94c13474a6799ecb54965128d5bc9e75c0f5f251eafb839843e3658bee7a6d466be0d1126370f2be87e1f3baf91c8b17e7f67a5535d27a6b481c56fe02700b45b8f4977c0dc6f2af51b9bc584096315f88103858aecb28c099b70b23040976738d7a132cd57cad0476bef8a42a8975e026c8f145158d64e05dc0a17ee2a252447107e112222aa6a4dea62f6366a7e9c54740f09a3f2484eeeaef095652a869a17b4f55a9041806c1a792a4d34858037133bcbc7ed0e995b002737b31cfa22ada57d1f474a86fd02765a0d7ac51d565c2fc0b3a3f9fc8cf2de491b675ae6972f85c25d6a9a650379ca49dbb310aadf0c0c365d0c0a167e76a69bd5a80f7b1f70ed4b3cc5ee6b24c340c7e71e0e481cde67a255929afaf755add470f8cba70f43c2eabfbc6ac81be9a708765b97708880aaa426dd97708f23c35667cff98d9c418d8011511ed0dc0d782fd76d0aa5fdfebc88b6dddaab2bef47543e5fe032ce0a658982fc99f5f51a07754df59780b709b1ba4d156453b11f1776e9c6946f57c193113e969bc426fc56c131fbdc6208452695ee92fa61c479863640a25c761378971199da76851c7a7ad59f52a1626703658c5fd839b498f5e327a85797c7559104c5a54662dba058646e4b8f598a5d273e4747cda544b4943e1baa8c80da20e89e5939514ed087a824e4d1116583fd6169f8f4560418c4e4716aa50444b99b2a259f21ac782541a5ccd6f4df5b207aea688b36772f698adf27f6e09eea031365d0b3d8dbddcdc5383bb0870840bacb720462a9cc18973efa72484d61c76720031c20a2b4d541c085744f63612c070ede6d1e75cb081ba637dfa883869477aa9e1ca13317d0c29f83cc174afdf06a62d868ba8ffae22a6892c76f27ec10fa19138ad01e8d8171b1a5c5de39ba0cc14c2d0f8bfb65baff53a84f2d5be56c7daf61864193a3395bd7a09d5f0c5952b14cf49d38e2af33670c2c56838736815cc2ecffbae91fe59ca1dfe543c2193aaaf193c7d0cab3ee940777c74d2907cf71b557256ead2ce7b25e63c49abd2556d7bf18abf4bc332a935c572e894b1b01cbd89e323498aeada359533d4bccc5c532dc2770bbf7e1eedba056f45ca34cb213c8dd69485a5ea2103d09a205388b8fca979e532a0d59fde387b0ab6bbe2f14aa56a5ecc910aa942af7e7343259bce61c8d807d284a99af6122ddc34bc582ed0aa6cff370002bdecded66aa6160d5f5fe174b7057c5bdcb14ba62db4a640251743094beea3aa4f2d4d11ce95b904366f29d54c2649d1de7509043462e36fdfa342b25868666df0563b1bd4c23e3c4d6fed79339bfed79e7875340c5f097000a3ed83d8a632cb6cd5eb679f976f27a917df1ef28939a91579123e5745c1f832a8244501d7eb5b29ef9eaf90dd04c2f85595be41a65f9c4d18b61f697d70271e502cb0e55c78c5eb5fdd6ef30389c1c585c3a2d85ecb102e5368a860567c75768c5728b8ee2b8305858c58feebea9672205a599fcf522e1f21bd61576d8f645b18579727c8778f19aa6e0832c8880eac0b5d17de4381e91be6e1c5bf79273f67a3995dd8c24a8656fa2634ca4b246cc2033c78f83302c7ef22513ca299398743bbd8678acf93a8f29076d1e328692ce47c82d1ae802b888523eaffd066b6d3ed851b9098578d4dd52511482407e3bfc56fa7d5a3291899888789a37135f2541d15c15954c12a286b5a056c9a787c1804eae53c59cda0a307ae2a70cdb55944aa5dc582b45c6a50f5f9caaecdca37aee3ae85ba7ef526b517405244c1c91a40468333f9f0e763c09e97b0099e35663953f93881f26b02c9644c33d603fa558942a6cec61087eec049201a353d8286560e38c4d4dc3f695f5c5e096b8c087b2107cf7f13561519a34b7e22c6e4a4b061b873341487f37b3357ab154bc1c3732ac07e4138bc227119e2645a974498a383d95ea2cca829dbb4e4e4e82a3a1c9246df9561201a1bb6a5ac857802d14cb6e5ee409437cf499a4f74ac00566a448877202a800fa821470be76d915ed0d1718f2e1f10a4e566e2588b09d1fd49e2e246a8501ce50004594bae1ca99a505baa92f8f77c099e74ff507a864ba8e94e9cca17738d21a0c458145c3355476c16c210c0168e171256334c1c0730e173e36683af27c876037f80100ce1cff834d3851d8c47752b2c0384e147c679c62516ef1084ed88b56c7b7234d9f13637e4b5d7841db300284247b89abdac41a9f2dd9d33d10345cd69370eee9a5efaa4f682480cb745352e7de854c02e7fa06c506e2b604d32d26518b522ec4ec2b3f067350883a6ce96490570d7d5532205a0a9648f44c44205e565cbdca8e857b7b6d623e831aecf4dc6cf97ee189a6929e976f8ee6b4bf5f048c7320f56d87cac8acdff9250e5e2be0d65a7d8980e7180a0f043815ef3f8299130e6b31a30573ff7d79363108b71d9330c817b6232c1a0ce5069f495f95fd92dd06c24cba4e3cda69ad0ec6703ae4e44c1a93d4bb53d487064f14979f682dadbe02d208ffd9926f71fa05ef338ce0bbee642489dd3fefb579f676e14c49b5f8bb7346e5c067a1c09d6da402c51fe9072e0cb00eddeb8e4d1043814013a5ac3be05c9862cfffca9f98b9a648d17ce900bb0169ae0bbff5252c0254bcb2fed849af05fa4dacdec6a0631809c99f131f9e66e27f3dff8639d1d5eb6d3af655a4c0f85c6ca5b544f62fae152a9e94a0f2fb9b87ae932c68789f883618301e50de6cdc806555ccac118c0f16acbe7acc0462e527def2d157c3f3f9142315d4224b22f61b929bce811910390125e2f6c8f8022bb40482f5cad299f7c89f87e325a1757c4aa381378fa78084c56c02c8036f5ec4b2a17f0945aed21fed88772be0ba73964035d02ce6de26119c2224c9cc08b50e93b8b3db24595be1805c1fa6af4969d436570e2f253fb62a01dc42406c308ecf675508d86ca76515dab6d835781decce1cd12c70c33003f8d7682b394e7688b10d08c165c791210d116655ebc6a39e550f6d622c83c2551ca8f1a580c05c0b19c9630539d1e4282dac05411356507912cb1311ecf0318f0bedd978f392d2d75979efbed6a743b8ebab8e67dfca70c4fb6c1a7c09ea7944a43800631a168faf155b74933a237ad5bb18d93c433cbb0a252f11b3c5e2ab8d1a2f67ca6263627e27a8410271c54e673c859a90010737ae6c69dcfc3a6f162c154fdd6f38456d0e94dddeba499d978213664601e80d65e98e0202169dae70d6d9350df67a34b2c275c257bbd6333eb527ffd38a3fe5abc1195d91c643afb1e0fb24565aa4d6b864ea78828eaaad060ec5620962cc311290e11112914545d8d695c88385ada79e0fb3589de3ac258502017cd4395bea4b02b44463fff1b9219ccb36735a3d40592ca453bf693b6d95855bcb711be43345b252a336b547f738d88b02e4795b94d8a4aa312a1c28c4913f12cebf508f40d89c71ef0ddd7ab4eeb3b3432afc48308e196d35739e97e618efdba5fb2025a0c3ea3f795a121036ec24d8214d7c9a3ab4d5c07add3e9825620a80fc94c370a2bdb10f9cf88441a4f5463df241466bdc2d4e540c88b627a71810e89d496ed3954bdb8ecaab06d418051274ebd1ee8d9742938561dae8ad050303071befe3a673217794fc83159abaf19701dca337b3bba8911d1fc95041da4add7444173c94b0321b66ca3b52c23517983ea9b2d57e64c7be17aa2bfcc39a7692e578c3b2320b5bef766b2ccb65ad50b34d18c94cbe30c6ca4b027adf13eaff6e3c32193cb7e02f39ad4df94f89a01d5231473f35cba38b351144c2b67902f6f5d444fb55a6f06a3da5f3fdf8596ceaaa2e3f7d93bbb9d84a0b22f35dcc08c35a074667affcbeab8d12e3a5dbac08072475ada02dae1c490d075d446c725ab9801bab7f04efd4d111f8db735dc305634c0c6c54d877127e636ebd0bc93daf2b1d5cb920534f27b6d80b513a12a701a5a649f4559f6a9cacbe2743f56412d426cc6bc7c8ee40f9b0c5a9ddd9becc71df435d4b6fff59fc071d0fb92348080403b35613a30f531fa2f6798ccadaa3c5c6fec6dd286c9666faf5efc2a45051767f81f83d6ef1d56eaccab9dc10b5e0410b081d88adc267ea7aa8af41257b8da0a4c255b0baa5ac62c39eec950ba0704a879cf58dcaec7ef08f6ff5f94dead3ecbceebfa73e2a24c8c0c32ad20f9f5ce91c006acf7a4795e48508d214b8ff8500542c81b6ec48f8a579439cc7330ec3b35f2e5cbd00718785bbbb580c5856d535421ffa14bc2eac37db06c25cc03c74fb59f0b8d50a36d3d5c10b0a3d193413fb3e27fe05b7f980e291fd181b9723a111785a3a5e91fd7211555789aece040cd25c3c2e4d1fd3039e3542c11aebea804be6e4838a6056958dac62d19c6de937d57fe1aabdc939dbf9df20095b4dcb4d6e419f4e6446a9f0da0a04904e4f2dbedfdf94ed3c620fafdf4d55a8f1780e5875e6785ca59e309edb0a36c7e0c99e081d3a5ae73c42710dbc25bc91993e69567448518ad4813d0fa31d84bfe5d8dacb077bef75c100a53d20130252dd4fc31bb960edbcf6631ba3190f3330eb4e424765032c1765711897641258dc8c0fbe4c2c63d40a07c7ac3bba3ad055ee8d8a00f7d8b01b7a71d8569c2202b52ae7ce467d5ced4120b84126063928c14f42d84cb6d32d73a87f197f2404dcc60c3af56a63e35157199183f9b0e899ebe4c89dc9246b5e44437e145b297437aa607ef04782c0e64005844370a02c252f1eae13ced880e6aa1490b880871da132c7bcbdf979ea8adf3cc2e9c299902a9c7a3e997f2e52f2b45a890feda246e7e65dc8afed48003e52e3dce7cd8bf8a9276ecad6b118115d0ae55326120b85844366a6917808e0cd512d685345b1adf37ea58204fe0e0350142e8f098aaae5fdcce66e0ae4ccb8f20a2bd25a9f6e0676c4662c81464e4b2ffc31696cc7ae2b58f514b74d62131b3c520633bdf563bf0fd964e8e41efbeb98013ff3b0147fc17d177f6f5e324ad38aa64ff581caf18b7f2fc81be8d7d9fdcccd47da1cf5a7f15aebbcd91081179a5bef8cabfd0d0caa4bf3fb1993a87b78514d6ea6b9bca7d6f4757b9e325fa84c6417cca293198870b228275e70cc8bdf157a68bfe7c635f3855d264a0b78e7a7360b1aa2714de5458a9168150bcdd15971f7c3235dabaee27da21cc8301599f7ebb1973faf857155211b6fa7914e7a17456a7d958c89331779af7e8a61141a0fcafac0fd5bb58cd07c2f7375b7473d6fc0796a2a4cc91e8a33e8cc5df7c8bbc25a6cac078ab00b40436f349f0a9d41c6c0e7d40a5d2b25195f5e3a171fd90b56d6cfbd0c3a05c1eacd4459ea7f16909d64284375ab688a45fb93e3143fb7f838b637bec7882253a291cf7638afab3de0212b1825938072d2310b56b60ea024f592dea5974f2855b259623e514a4d222ae162a73481d1dd45b93a4d5d11f28fc3ca9f7174ac324ec6d854f71d69a274a86e402ce0f3a9ee9e0fbb521c7f9e36e528c09fcf19e1f37dfce273423e858a661f98d237dee7ec44918267754d0c8bc3842fef183bed9ea022d6dc580b90b9d14e30a06dbac9b7ef1ce0fffe52e0c1ae4177cd39d7a1584091a74a46efbeb60c9636290256f1397d7ddc61cef79fe91f2ad41647c3ababc2005521803e813ef1c3ad5cc6bc4213e731cce1f0e1132e753f718167f5909cd0ed9dea16243ee0e496898844620f3311c54c5fc001c34c713991ce7826500c8d37b367dddfb3de3008fc2b0a093407427d0f00bf3dacc4ccffb63d82fa5267a68d54ce03c21f76c5215e56ff3941fd93f6294a238521d1b11418c18f50bafeb43d7db7e92093159f026cfae3da0dde6638999b9348c0cf5640873f3aadada033055d64858486c3952cfc4af422c7e553bc03dffe649ee89aff8499ce5c2d8c9f28a5930ef394ee4ef19b0b04c9ff81c02070e5f90ebff3c8913e05caac416134c50cfbc19a6bb77230d255da4cc1fcdcc7b8c55d3c15f9398fbd91e7e4d1e125c91446d409e9b05989491ecbac5b7c9839f90d735d1249dad2a017f8041e6672a5d95d845232bea0f9458572d49a98a279f797a211bbd8c17117f919ea1e9536df7353db7cf0830992bd82c0188943e60bc93c5380af18f6ec8e4c5740e37cdc11a8f4e411e6bfe0f8e3a268ea9bf14c52f22284788d70b36eb50bfc17003a9b77b6fe595518714b8e428431d04f82e0577417ea6dfc501dc7eecb6ab48231601bf4e9ab63b222ee3bb4541f58991581b7f60e199beb92dbcd3e6f000f0aff05166896e87995d00536639558f1f76336e896c6332c49283c3b04f75f6c2ed7f7df82fdb2b77eb1ea80c6d3a47120316b8488c409802a4d7c702d4620e57b8c4195259661705ec629552a4eaa0c464430456a7054053974fb4d2ae3af138ec8bd0bebd26e5341ca929f418c6174fd6a0202d366e607dc74a85d2"};
+
+    const STORAGE_WORKOUTS_KEY = 'athletic_workouts_list_v2';
+    const STORAGE_INJ_KEY = 'athletic_injections_count';
+
+    let DEFAULT_WORKOUTS = [];
+    let workouts = [];
+    let injectionsCount = 5;
+    let muscleData = {};
+
+    function saveWorkoutsToStorage() {
+      localStorage.setItem(STORAGE_WORKOUTS_KEY, JSON.stringify(workouts));
+      renderWorkoutsTable();
+      renderCharts();
+      updateHeaderMetrics();
+    }
+
+    function updateInjectionUI() {
+      document.getElementById('header-injections').innerText = injectionsCount;
+      document.getElementById('card-injections').innerText = injectionsCount;
+      const nextEl = document.getElementById('next-inj-num');
+      if (nextEl) nextEl.innerText = injectionsCount + 1;
+      const totEl = document.getElementById('card-total-mg');
+      if (totEl) totEl.innerText = `Введено: ${injectionsCount * 125} мг`;
+    }
+
+    function logInjection() {
+      injectionsCount++;
+      localStorage.setItem(STORAGE_INJ_KEY, injectionsCount);
+      updateInjectionUI();
+      alert(`✅ Инъекция №${injectionsCount} (125 мг Тестостерона Энантата) сохранена!\nВсего введено: ${injectionsCount * 125} мг.`);
+    }
+
+    function openAddModal() {
+      const now = new Date();
+      const d = String(now.getDate()).padStart(2, '0');
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      document.getElementById('inp-date').value = `${d}.${m}`;
+      document.getElementById('modal-add').classList.remove('hidden');
+    }
+
+    function closeAddModal() {
+      document.getElementById('modal-add').classList.add('hidden');
+      document.getElementById('form-workout').reset();
+    }
+
+    function saveNewWorkout(e) {
+      e.preventDefault();
+      const date = document.getElementById('inp-date').value.trim();
+      const weightVal = parseFloat(document.getElementById('inp-weight').value);
+      const tonnageVal = parseFloat(document.getElementById('inp-tonnage').value);
+      const bench = document.getElementById('inp-bench').value.trim() || '—';
+      const db = document.getElementById('inp-db').value.trim() || '—';
+      const butterfly = document.getElementById('inp-butterfly').value.trim() || '—';
+      const french = document.getElementById('inp-french').value.trim() || '—';
+      const cable = document.getElementById('inp-cable').value.trim() || '—';
+
+      const newEntry = {
+        date,
+        tonnage: isNaN(tonnageVal) ? 0 : tonnageVal,
+        weight: isNaN(weightVal) ? null : weightVal,
+        bench,
+        db,
+        butterfly,
+        french,
+        cable,
+        isCustom: true
+      };
+
+      workouts.push(newEntry);
+      saveWorkoutsToStorage();
+      closeAddModal();
+      alert(`🎉 Тренировка за ${date} успешно сохранена!\nТоннаж: ${newEntry.tonnage} т. Графики и журнал обновлены.`);
+    }
+
+    function deleteWorkout(index) {
+      if (confirm(`Удалить тренировку за ${workouts[index].date}?`)) {
+        workouts.splice(index, 1);
+        saveWorkoutsToStorage();
+      }
+    }
+
+    function exportData() {
+      const dataStr = JSON.stringify({ workouts, injectionsCount }, null, 2);
+      navigator.clipboard.writeText(dataStr).then(() => {
+        alert('📋 Все данные скопированы в буфер обмена!\nМожешь вставить их в заметки или переслать себе в Telegram.');
+      }).catch(() => {
+        prompt('Скопируй свои данные:', dataStr);
+      });
+    }
+
+    function renderWorkoutsTable() {
+      const tbody = document.getElementById('workouts-tbody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      workouts.forEach((w, idx) => {
+        const isLast = idx === workouts.length - 1;
+        const tr = document.createElement('tr');
+        tr.className = isLast ? 'bg-red-500/10 hover:bg-red-500/15 border-l-2 border-red-500' : 'hover:bg-slate-800/30';
+        
+        tr.innerHTML = `
+          <td class="py-2.5 px-3 text-slate-300 font-sans font-bold flex items-center gap-1">
+            ${w.date}
+            ${isLast ? '<span class="text-[9px] px-1 py-0.2 rounded bg-red-500 text-white uppercase font-sans">NEW</span>' : ''}
+          </td>
+          <td class="py-2.5 px-3 text-white font-bold">${w.tonnage.toLocaleString('ru-RU')} т</td>
+          <td class="py-2.5 px-3 ${w.weight ? 'text-cyan-300 font-bold' : 'text-slate-500'}">${w.weight ? w.weight.toLocaleString('ru-RU') + ' кг' : '—'}</td>
+          <td class="py-2.5 px-3 text-cyan-300">${w.bench || '—'}</td>
+          <td class="py-2.5 px-3 ${w.db && w.db.includes('60') ? 'text-red-400 font-bold' : ''}">${w.db || '—'}</td>
+          <td class="py-2.5 px-3 ${w.butterfly && w.butterfly.includes('45') ? 'text-red-400 font-bold' : ''}">${w.butterfly || '—'}</td>
+          <td class="py-2.5 px-3">${w.french || '—'}</td>
+          <td class="py-2.5 px-3 ${w.cable && w.cable.includes('45') ? 'text-amber-400 font-bold' : ''}">${w.cable || '—'}</td>
+          <td class="py-2.5 px-2 text-center">
+            ${idx >= DEFAULT_WORKOUTS.length ? `<button onclick="deleteWorkout(${idx})" title="Удалить" class="text-red-400 hover:text-red-200 text-xs px-1.5 py-0.5 rounded bg-red-500/20">✕</button>` : '<span class="text-slate-600 text-[10px]">🔒</span>'}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function updateHeaderMetrics() {
+      if (workouts.length === 0) return;
+      const last = workouts[workouts.length - 1];
+      const prev = workouts.length > 1 ? workouts[workouts.length - 2] : null;
+
+      // Update Tonnage
+      document.getElementById('header-tonnage').innerText = last.tonnage.toLocaleString('ru-RU');
+      if (prev) {
+        const diff = (last.tonnage - prev.tonnage).toFixed(2);
+        const sign = diff >= 0 ? '+' : '';
+        document.getElementById('header-tonnage-diff').innerText = `${sign}${diff} т`;
+        document.getElementById('header-tonnage-diff').className = `text-[10px] sm:text-xs font-semibold ml-1 ${diff >= 0 ? 'text-emerald-400' : 'text-amber-400'}`;
+      }
+
+      // Update Weight
+      const lastWithWeight = [...workouts].reverse().find(w => w.weight !== null);
+      if (lastWithWeight) {
+        document.getElementById('header-weight').innerText = lastWithWeight.weight.toLocaleString('ru-RU');
+        const firstWithWeight = workouts.find(w => w.weight !== null);
+        if (firstWithWeight && firstWithWeight !== lastWithWeight) {
+          const diffW = (lastWithWeight.weight - firstWithWeight.weight).toFixed(2);
+          const signW = diffW >= 0 ? '+' : '';
+          document.getElementById('header-weight-diff').innerText = `${signW}${diffW} кг`;
+          document.getElementById('header-weight-sub').innerText = `с ${firstWithWeight.weight} кг (${firstWithWeight.date})`;
+        }
+      }
+
+      // Update Header Period & Split
+      document.getElementById('header-period').innerText = `${workouts[0].date} — ${last.date}`;
+      const splitEl = document.getElementById('split-chest-tonnage');
+      if (splitEl) splitEl.innerText = `${last.tonnage} т`;
+    }
+
+    function renderCharts() {
+      // 1. Tonnage Chart
+      const tonContainer = document.getElementById('chart-tonnage-container');
+      if (!tonContainer || workouts.length === 0) return;
+
+      const tonData = workouts.map(w => ({ date: w.date, val: w.tonnage }));
+      const minVal = 8.5;
+      const maxVal = Math.max(13.5, ...tonData.map(d => d.val + 0.5));
+      const width = 500;
+      const height = 220;
+      const padLeft = 45;
+      const padRight = 30;
+      const padBottom = 25;
+      const padTop = 35;
+
+      const xStep = tonData.length > 1 ? (width - padLeft - padRight) / (tonData.length - 1) : 0;
+      const pts = tonData.map((d, i) => {
+        const x = padLeft + i * xStep;
+        const y = height - padBottom - ((d.val - minVal) / (maxVal - minVal)) * (height - padTop - padBottom);
+        return { x, y, date: d.date, val: d.val };
+      });
+
+      let pathD = '';
+      pts.forEach((p, i) => {
+        pathD += (i === 0 ? `M ${p.x} ${p.y}` : ` L ${p.x} ${p.y}`);
+      });
+      const fillD = pathD + ` L ${pts[pts.length - 1].x} ${height - padBottom} L ${pts[0].x} ${height - padBottom} Z`;
+
+      let circlesAndLabels = '';
+      pts.forEach((p, i) => {
+        const isLast = i === pts.length - 1;
+        circlesAndLabels += `
+          <circle cx="${p.x}" cy="${p.y}" r="${isLast ? 6 : 4}" fill="${isLast ? '#10b981' : '#0b0f19'}" stroke="${isLast ? '#ffffff' : '#22d3ee'}" stroke-width="${isLast ? 2.5 : 2}" />
+          <text x="${p.x}" y="${p.y - 8}" font-size="10" font-weight="bold" fill="${isLast ? '#34d399' : '#38bdf8'}" text-anchor="middle">${p.val}т</text>
+          <text x="${p.x}" y="${height - 5}" font-size="9" fill="#94a3b8" text-anchor="middle">${p.date}</text>
+        `;
+      });
+
+      tonContainer.innerHTML = `
+        <svg viewBox="0 0 ${width} ${height}" class="w-full h-full overflow-visible">
+          <line x1="${padLeft}" y1="35" x2="${width - padRight}" y2="35" stroke="#1e293b" stroke-dasharray="4" />
+          <line x1="${padLeft}" y1="95" x2="${width - padRight}" y2="95" stroke="#1e293b" stroke-dasharray="4" />
+          <line x1="${padLeft}" y1="155" x2="${width - padRight}" y2="155" stroke="#1e293b" stroke-dasharray="4" />
+          <defs>
+            <linearGradient id="tonGradDyn" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.45" />
+              <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.0" />
+            </linearGradient>
+          </defs>
+          <path d="${fillD}" fill="url(#tonGradDyn)" />
+          <path d="${pathD}" fill="none" stroke="#22d3ee" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+          ${circlesAndLabels}
+        </svg>
+      `;
+
+      // 2. Weight Chart
+      const weightContainer = document.getElementById('chart-weight-container');
+      if (!weightContainer) return;
+
+      const weightData = workouts.filter(w => w.weight !== null).map(w => ({ date: w.date, val: w.weight }));
+      if (weightData.length > 0) {
+        const wMin = 86;
+        const wMax = Math.max(93, ...weightData.map(d => d.val + 1));
+        const barWidth = Math.min(50, (width - padLeft - padRight) / weightData.length - 12);
+
+        let barsSvg = '';
+        weightData.forEach((d, i) => {
+          const x = padLeft + 15 + i * ((width - padLeft - padRight) / weightData.length);
+          const barH = ((d.val - wMin) / (wMax - wMin)) * (height - padTop - padBottom);
+          const y = height - padBottom - barH;
+          const isLast = i === weightData.length - 1;
+          const color = isLast ? '#ef4444' : (i % 2 === 0 ? '#3b82f6' : '#06b6d4');
+
+          barsSvg += `
+            <g class="transition-all hover:opacity-80">
+              <rect x="${x}" y="${y}" width="${barWidth}" height="${barH}" rx="6" fill="${color}" fill-opacity="0.85" ${isLast ? 'stroke="#f87171" stroke-width="1.5"' : ''} />
+              <text x="${x + barWidth / 2}" y="${y - 8}" font-size="11" font-weight="bold" fill="${isLast ? '#fca5a5' : '#93c5fd'}" text-anchor="middle">${d.val}</text>
+              <text x="${x + barWidth / 2}" y="${height - 5}" font-size="9" fill="#94a3b8" text-anchor="middle">${d.date}</text>
+            </g>
+          `;
+        });
+
+        weightContainer.innerHTML = `
+          <svg viewBox="0 0 ${width} ${height}" class="w-full h-full overflow-visible">
+            <line x1="${padLeft}" y1="45" x2="${width - padRight}" y2="45" stroke="#1e293b" stroke-dasharray="4" />
+            <line x1="${padLeft}" y1="105" x2="${width - padRight}" y2="105" stroke="#1e293b" stroke-dasharray="4" />
+            <line x1="${padLeft}" y1="165" x2="${width - padRight}" y2="165" stroke="#1e293b" stroke-dasharray="4" />
+            ${barsSvg}
+          </svg>
+        `;
+      }
+    }
+
+    let currentView = 'front';
+    let currentMuscle = 'chest';
+
+    function setView(view) {
+      currentView = view;
+      const frontSvg = document.getElementById('svg-front');
+      const backSvg = document.getElementById('svg-back');
+      const btnFront = document.getElementById('btn-view-front');
+      const btnBack = document.getElementById('btn-view-back');
+
+      if (view === 'front') {
+        frontSvg.classList.remove('hidden');
+        backSvg.classList.add('hidden');
+        btnFront.className = "px-2.5 py-1 rounded-md text-xs bg-cyan-500 text-slate-950 font-bold transition";
+        btnBack.className = "px-2.5 py-1 rounded-md text-xs text-slate-400 hover:text-white transition";
+      } else {
+        frontSvg.classList.add('hidden');
+        backSvg.classList.remove('hidden');
+        btnBack.className = "px-2.5 py-1 rounded-md text-xs bg-cyan-500 text-slate-950 font-bold transition";
+        btnFront.className = "px-2.5 py-1 rounded-md text-xs text-slate-400 hover:text-white transition";
+      }
+      highlightActiveMuscle();
+    }
+
+    function selectMuscle(key) {
+      currentMuscle = key;
+      const data = muscleData[key];
+      if (!data) return;
+
+      if ((key === 'back' || key === 'triceps' || key === 'traps') && currentView !== 'back') {
+        setView('back');
+      } else if ((key === 'chest' || key === 'abs' || key === 'quads' || key === 'biceps' || key === 'core') && currentView !== 'front') {
+        setView('front');
+      }
+
+      document.getElementById('detail-title').innerText = data.title;
+      document.getElementById('detail-subtitle').innerText = data.subtitle;
+      document.getElementById('detail-desc').innerText = data.desc;
+      document.getElementById('detail-badge').innerHTML = `<span>${data.badge}</span>`;
+      document.getElementById('detail-badge').className = `px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs font-bold ${data.badgeClass} flex items-center gap-1.5`;
+
+      document.getElementById('metric-tonnage').innerText = data.tonnage;
+      document.getElementById('metric-sub-tonnage').innerText = data.tonnageSub;
+      document.getElementById('metric-pr').innerText = data.pr;
+      document.getElementById('metric-sub-pr').innerText = data.prSub;
+      document.getElementById('metric-base').innerText = data.base;
+      document.getElementById('metric-sub-base').innerText = data.baseSub;
+      document.getElementById('metric-status').innerText = data.status;
+      document.getElementById('metric-sub-status').innerText = data.statusSub;
+
+      document.getElementById('detail-target').innerText = data.target;
+      document.getElementById('detail-glow').style.background = data.glowColor;
+
+      const exContainer = document.getElementById('detail-exercises');
+      exContainer.innerHTML = '';
+      data.exercises.forEach(ex => {
+        const row = document.createElement('div');
+        row.className = "p-2.5 sm:p-3 rounded-xl bg-slate-900/80 border border-slate-800/80 flex items-center justify-between gap-2";
+        row.innerHTML = `
+          <div>
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs font-bold text-white">${ex.name}</span>
+              <span class="text-[9px] px-1.5 py-0.2 rounded font-mono ${ex.tag === 'Рекорд' ? 'bg-red-500/20 text-red-300 border border-red-500/30' : 'bg-slate-800 text-slate-300'}">${ex.tag}</span>
+            </div>
+            <div class="text-[10px] sm:text-[11px] text-slate-400 mt-0.5">${ex.trend}</div>
+          </div>
+          <div class="text-right">
+            <div class="text-xs font-mono font-bold text-cyan-300">${ex.current}</div>
+            <div class="text-[9px] sm:text-[10px] text-slate-500">${ex.best}</div>
+          </div>
+        `;
+        exContainer.appendChild(row);
+      });
+
+      highlightActiveMuscle();
+    }
+
+    function highlightActiveMuscle() {
+      document.querySelectorAll('.muscle-part').forEach(el => el.classList.remove('muscle-active'));
+
+      const map = {
+        chest: ['muscle-chest'],
+        triceps: ['muscle-triceps'],
+        back: ['muscle-lats'],
+        legs: ['muscle-quads', 'muscle-glutes', 'muscle-hamstrings'],
+        shoulders: ['muscle-delts-front', 'muscle-delts-back'],
+        biceps: ['muscle-biceps'],
+        core: ['muscle-abs'],
+        calves: ['muscle-calves-front', 'muscle-calves-back'],
+        traps: ['muscle-traps']
+      };
+
+      const ids = map[currentMuscle] || [];
+      ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('muscle-active');
+      });
+    }
+
+    function switchTab(tabId) {
+      const tabs = ['body', 'pharma', 'charts', 'table', 'goals'];
+      tabs.forEach(t => {
+        const content = document.getElementById(`tab-${t}`);
+        const btn = document.getElementById(`tab-btn-${t}`);
+        if (t === tabId) {
+          content.classList.remove('hidden');
+          btn.className = "py-2 px-3 sm:py-2.5 sm:px-4 rounded-xl border-b-2 border-cyan-400 text-cyan-300 bg-slate-800/60 flex items-center gap-1.5 whitespace-nowrap font-semibold";
+        } else {
+          content.classList.add('hidden');
+          btn.className = "py-2 px-3 sm:py-2.5 sm:px-4 rounded-xl border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5 whitespace-nowrap font-medium";
+        }
+      });
+    }
+
+        /* --- CRITICAL SECURITY: AES-256-GCM DECRYPTION & PIN LOCK --- */
+    let enteredPin = "";
+
+    function hexToBytes(hex) {
+      const bytes = new Uint8Array(hex.length / 2);
+      for (let i = 0; i < hex.length; i += 2) {
+        bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+      }
+      return bytes;
+    }
+
+    async function decryptVaultWithPin(pin) {
+      try {
+        const saltBytes = hexToBytes(ENCRYPTED_VAULT.saltHex);
+        const ivBytes = hexToBytes(ENCRYPTED_VAULT.ivHex);
+        const tagBytes = hexToBytes(ENCRYPTED_VAULT.tagHex);
+        const dataBytes = hexToBytes(ENCRYPTED_VAULT.dataHex);
+
+        // Combined data + tag for standard Web Crypto AES-GCM
+        const ciphertext = new Uint8Array(dataBytes.length + tagBytes.length);
+        ciphertext.set(dataBytes, 0);
+        ciphertext.set(tagBytes, dataBytes.length);
+
+        // PBKDF2 import key
+        const enc = new TextEncoder();
+        const keyMaterial = await crypto.subtle.importKey(
+          "raw",
+          enc.encode(pin),
+          { name: "PBKDF2" },
+          false,
+          ["deriveKey"]
+        );
+
+        // Derive AES-GCM-256 key
+        const aesKey = await crypto.subtle.deriveKey(
+          {
+            name: "PBKDF2",
+            salt: saltBytes,
+            iterations: 100000,
+            hash: "SHA-256"
+          },
+          keyMaterial,
+          { name: "AES-GCM", length: 256 },
+          false,
+          ["decrypt"]
+        );
+
+        // Decrypt
+        const decryptedBuffer = await crypto.subtle.decrypt(
+          {
+            name: "AES-GCM",
+            iv: ivBytes,
+            tagLength: 128
+          },
+          aesKey,
+          ciphertext
+        );
+
+        const decoded = new TextDecoder().decode(decryptedBuffer);
+        return JSON.parse(decoded);
+      } catch (err) {
+        return null; // Decryption failed = wrong PIN!
+      }
+    }
+
+    function initPinSystem() {
+      enteredPin = "";
+      updatePinDots();
+      const pinError = document.getElementById('pin-error');
+      if (pinError) pinError.innerText = "";
+
+      // Check session unlock
+      const savedSessionPin = sessionStorage.getItem('athletic_session_pin');
+      if (savedSessionPin) {
+        attemptUnlock(savedSessionPin, true);
+      }
+    }
+
+    function updatePinDots() {
+      for (let i = 0; i < 4; i++) {
+        const dot = document.getElementById(`dot-${i}`);
+        if (!dot) continue;
+        if (i < enteredPin.length) {
+          dot.className = "w-4 h-4 rounded-full border-2 border-cyan-400 bg-cyan-400 scale-110 shadow-lg shadow-cyan-500/50 transition-all duration-150";
+        } else {
+          dot.className = "w-4 h-4 rounded-full border-2 border-slate-600 bg-slate-800 transition-all duration-150";
+        }
+      }
+    }
+
+    async function pressPin(digit) {
+      if (enteredPin.length >= 4) return;
+      enteredPin += digit;
+      updatePinDots();
+
+      if (enteredPin.length === 4) {
+        setTimeout(async () => {
+          await attemptUnlock(enteredPin, false);
+        }, 120);
+      }
+    }
+
+    function pressPinBackspace() {
+      if (enteredPin.length > 0) {
+        enteredPin = enteredPin.slice(0, -1);
+        updatePinDots();
+        const err = document.getElementById('pin-error');
+        if (err) err.innerText = "";
+      }
+    }
+
+    function resetPinCodePrompt() {
+      enteredPin = "";
+      updatePinDots();
+      const err = document.getElementById('pin-error');
+      if (err) err.innerText = "";
+    }
+
+    async function attemptUnlock(pin, isSilent) {
+      const pinError = document.getElementById('pin-error');
+      if (pinError) pinError.innerText = isSilent ? "" : "Проверка ключа шифрования...";
+
+      const decryptedPayload = await decryptVaultWithPin(pin);
+
+      if (!decryptedPayload) {
+        if (!isSilent) {
+          pinError.innerText = "❌ Неверный PIN! Доступ к данным запрещён.";
+          const overlay = document.getElementById('pin-overlay');
+          if (overlay) {
+            overlay.classList.add('animate-pulse');
+            setTimeout(() => overlay.classList.remove('animate-pulse'), 300);
+          }
+          enteredPin = "";
+          updatePinDots();
+        } else {
+          sessionStorage.removeItem('athletic_session_pin');
+        }
+        return;
+      }
+
+      // Success! Decryption was mathematically valid.
+      sessionStorage.setItem('athletic_session_pin', pin);
+
+      // Load payload
+      DEFAULT_WORKOUTS = decryptedPayload.workouts;
+      muscleData = decryptedPayload.muscleData;
+
+      try {
+        const saved = localStorage.getItem(STORAGE_WORKOUTS_KEY);
+        workouts = saved ? JSON.parse(saved) : DEFAULT_WORKOUTS;
+      } catch (e) {
+        workouts = DEFAULT_WORKOUTS;
+      }
+
+      injectionsCount = parseInt(localStorage.getItem(STORAGE_INJ_KEY) || String(decryptedPayload.injectionsCount || 5), 10);
+
+      // Render app
+      updateInjectionUI();
+      renderWorkoutsTable();
+      renderCharts();
+      updateHeaderMetrics();
+      selectMuscle('chest');
+
+      // Unhide UI
+      const overlay = document.getElementById('pin-overlay');
+      const content = document.getElementById('app-content');
+      if (overlay) {
+        overlay.classList.add('opacity-0', 'pointer-events-none');
+        setTimeout(() => overlay.classList.add('hidden'), 300);
+      }
+      if (content) {
+        content.classList.remove('opacity-0');
+      }
+    }
+
+    function lockAppManually() {
+      sessionStorage.removeItem('athletic_session_pin');
+      const overlay = document.getElementById('pin-overlay');
+      const content = document.getElementById('app-content');
+      if (content) content.classList.add('opacity-0');
+      if (overlay) {
+        overlay.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+      }
+      initPinSystem();
+    }
+
+    // Hardware keyboard support
+    window.addEventListener('keydown', (e) => {
+      const overlay = document.getElementById('pin-overlay');
+      if (overlay && !overlay.classList.contains('hidden') && !overlay.classList.contains('pointer-events-none')) {
+        if (e.key >= '0' && e.key <= '9') {
+          pressPin(e.key);
+        } else if (e.key === 'Backspace') {
+          pressPinBackspace();
+        } else if (e.key === 'Escape') {
+          resetPinCodePrompt();
+        }
+      }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initPinSystem();
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW note: ', err));
+      }
+    });
+
+  </script>
+</body>
+</html>
