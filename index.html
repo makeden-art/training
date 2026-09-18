@@ -1747,9 +1747,6 @@
 
     function recordSet(bi, ei) {
       const ex = LIVE_PLAN[bi].exercises[ei];
-      if (ex.completedSets.length >= ex.targetSets) {
-        if (!confirm(`Уже записано максимальное число подходов (${ex.targetSets}). Добавить дополнительный сет?`)) return;
-      }
 
       const unit = ex.unit || 'kg';
       const weightInKg = unit === 'lbs' ? +(ex.targetWeight * 0.453592).toFixed(1) : ex.targetWeight;
@@ -1791,10 +1788,12 @@
           const isDone = setsCount >= ex.targetSets;
 
           let setPillsHtml = '';
-          for (let s = 0; s < ex.targetSets; s++) {
+          const totalSlots = Math.max(ex.targetSets, setsCount);
+          for (let s = 0; s < totalSlots; s++) {
             const completed = ex.completedSets[s];
             if (completed) {
-              setPillsHtml += `<div class="px-2 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-mono text-[11px] font-bold">#${s+1}: ${completed.weight}×${completed.reps}</div>`;
+              const isExtra = s >= ex.targetSets;
+              setPillsHtml += `<div class="px-2 py-1 rounded-lg ${isExtra ? 'bg-amber-500/25 border-amber-500/50 text-amber-300' : 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'} border font-mono text-[11px] font-bold">#${s+1}: ${completed.weight}×${completed.reps}</div>`;
             } else {
               setPillsHtml += `<div class="px-2 py-1 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-500 font-mono text-[11px]">#${s+1}: —</div>`;
             }
@@ -1806,9 +1805,9 @@
                 <div>
                   <div class="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
                     <span>${ex.name}</span>
-                    ${isDone ? '<span class="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500 text-slate-950 font-black">ГОТОВО</span>' : ''}
+                    ${setsCount >= ex.targetSets ? `<span class="text-[9px] px-1.5 py-0.2 rounded ${setsCount > ex.targetSets ? 'bg-amber-500 text-slate-950 font-black' : 'bg-emerald-500 text-slate-950 font-black'}">${setsCount} из ${ex.targetSets} ${setsCount > ex.targetSets ? '🔥' : '✓'}</span>` : ''}
                   </div>
-                  <div class="text-[10px] text-slate-400">Цель: ${ex.targetSets} подходов × ${ex.targetReps} повт.</div>
+                  <div class="text-[10px] text-slate-400">База: ${ex.targetSets} подходов × ${ex.targetReps} повт. (можно делать сколько угодно)</div>
                 </div>
                 <div class="flex items-center gap-1.5 flex-wrap">
                   ${setPillsHtml}
