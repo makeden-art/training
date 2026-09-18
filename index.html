@@ -635,12 +635,12 @@
     <div id="tab-table" class="glass-card p-4 sm:p-6 rounded-2xl hidden space-y-4">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h3 class="text-base sm:text-lg font-bold text-white">Журнал тренировок: Грудь + Трицепс</h3>
-          <p class="text-xs text-slate-400">Все данные сохраняются прямо в память устройства</p>
+          <h3 class="text-base sm:text-lg font-bold text-white">Журнал всех тренировок</h3>
+          <p class="text-xs text-slate-400">Включает автосохраненные Live-тренировки (Ноги/Плечи, Спина/Бицепс, Грудь) и ручные записи</p>
         </div>
         <div class="flex items-center gap-2">
           <button onclick="openAddModal()" class="px-3 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 active:scale-95 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-cyan-500/20 transition">
-            <span>➕</span> Записать тренировку
+            <span>➕</span> Записать вручную
           </button>
           <button onclick="openAiExportModal()" title="Экспорт полного отчёта для ИИ / DeepSeek" class="px-3 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 active:scale-95 text-white font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-purple-600/20 transition">
             <span>🤖</span> Пакет для ИИ
@@ -655,14 +655,10 @@
         <table class="w-full text-left text-xs">
           <thead class="uppercase bg-slate-900/90 text-slate-400 border-b border-slate-800">
             <tr>
-              <th class="py-2.5 px-3">Дата</th>
+              <th class="py-2.5 px-3">Дата & Сплит</th>
               <th class="py-2.5 px-3">Тоннаж</th>
               <th class="py-2.5 px-3">Вес</th>
-              <th class="py-2.5 px-3">Жим лёжа</th>
-              <th class="py-2.5 px-3">Гантели</th>
-              <th class="py-2.5 px-3">Бабочка</th>
-              <th class="py-2.5 px-3">Франц.</th>
-              <th class="py-2.5 px-3">Трос</th>
+              <th class="py-2.5 px-3">Упражнения / Детали</th>
               <th class="py-2.5 px-2 text-center">Действие</th>
             </tr>
           </thead>
@@ -1045,20 +1041,36 @@
         const tr = document.createElement('tr');
         tr.className = isLast ? 'bg-red-500/10 hover:bg-red-500/15 border-l-2 border-red-500' : 'hover:bg-slate-800/30';
         
+        let detailsHtml = '';
+        if (w.details) {
+          detailsHtml = `<div class="text-xs text-slate-300 font-sans line-clamp-2">${w.details}</div>`;
+        } else {
+          // Classic chest layout fallback
+          const parts = [];
+          if (w.bench && w.bench !== '—') parts.push(`Жим: ${w.bench}`);
+          if (w.db && w.db !== '—') parts.push(`Гантели: ${w.db}`);
+          if (w.butterfly && w.butterfly !== '—') parts.push(`Бабочка: ${w.butterfly}`);
+          if (w.french && w.french !== '—') parts.push(`Франц: ${w.french}`);
+          if (w.cable && w.cable !== '—') parts.push(`Трос: ${w.cable}`);
+          detailsHtml = `<div class="text-xs text-slate-300 font-sans">${parts.join(' • ') || '—'}</div>`;
+        }
+
+        const splitBadge = w.split ? `<span class="text-[9px] px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">${w.split}</span>` : '';
+
         tr.innerHTML = `
-          <td class="py-2.5 px-3 text-slate-300 font-sans font-bold flex items-center gap-1">
-            ${w.date}
-            ${isLast ? '<span class="text-[9px] px-1 py-0.2 rounded bg-red-500 text-white uppercase font-sans">NEW</span>' : ''}
+          <td class="py-2.5 px-3 text-slate-300 font-sans font-bold">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span>${w.date}</span>
+              ${isLast ? '<span class="text-[9px] px-1 py-0.2 rounded bg-red-500 text-white uppercase font-sans">NEW</span>' : ''}
+              ${splitBadge}
+            </div>
+            ${w.time ? `<div class="text-[10px] text-slate-500 font-mono">${w.time}</div>` : ''}
           </td>
-          <td class="py-2.5 px-3 text-white font-bold">${w.tonnage.toLocaleString('ru-RU')} т</td>
-          <td class="py-2.5 px-3 ${w.weight ? 'text-cyan-300 font-bold' : 'text-slate-500'}">${w.weight ? w.weight.toLocaleString('ru-RU') + ' кг' : '—'}</td>
-          <td class="py-2.5 px-3 text-cyan-300">${w.bench || '—'}</td>
-          <td class="py-2.5 px-3 ${w.db && w.db.includes('60') ? 'text-red-400 font-bold' : ''}">${w.db || '—'}</td>
-          <td class="py-2.5 px-3 ${w.butterfly && w.butterfly.includes('45') ? 'text-red-400 font-bold' : ''}">${w.butterfly || '—'}</td>
-          <td class="py-2.5 px-3">${w.french || '—'}</td>
-          <td class="py-2.5 px-3 ${w.cable && w.cable.includes('45') ? 'text-amber-400 font-bold' : ''}">${w.cable || '—'}</td>
-          <td class="py-2.5 px-2 text-center">
-            ${idx >= DEFAULT_WORKOUTS.length ? `<button onclick="deleteWorkout(${idx})" title="Удалить" class="text-red-400 hover:text-red-200 text-xs px-1.5 py-0.5 rounded bg-red-500/20">✕</button>` : '<span class="text-slate-600 text-[10px]">🔒</span>'}
+          <td class="py-2.5 px-3 text-white font-bold whitespace-nowrap">${w.tonnage.toLocaleString('ru-RU')} т</td>
+          <td class="py-2.5 px-3 ${w.weight ? 'text-cyan-300 font-bold' : 'text-slate-500'} whitespace-nowrap">${w.weight ? w.weight.toLocaleString('ru-RU') + ' кг' : '—'}</td>
+          <td class="py-2.5 px-3 max-w-xs sm:max-w-md">${detailsHtml}</td>
+          <td class="py-2.5 px-2 text-center whitespace-nowrap">
+            ${idx >= DEFAULT_WORKOUTS.length ? `<button onclick="deleteWorkout(${idx})" title="Удалить" class="text-red-400 hover:text-red-200 text-xs px-1.5 py-0.5 rounded bg-red-500/20 active:scale-90">✕</button>` : '<span class="text-slate-600 text-[10px]">🔒</span>'}
           </td>
         `;
         tbody.appendChild(tr);
@@ -1588,7 +1600,7 @@
         }, 1000);
       } else {
         // Finish session
-        if (confirm("Завершить тренировку и сформировать финальный отчёт?")) {
+        if (confirm("Завершить тренировку, сохранить в Журнал и скопировать отчёт для DeepSeek?")) {
           sessionActive = false;
           clearInterval(sessionTimerInterval);
           stopRestTimer();
@@ -1596,7 +1608,69 @@
           document.getElementById('btn-session-icon').innerText = "▶️";
           document.getElementById('btn-session-toggle').className = "px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 active:scale-95 text-slate-950 font-extrabold text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-emerald-500/30 transition-all";
           document.getElementById('live-session-status').innerText = "Завершена ✅";
+
+          // 1. Calculate live session tonnage & completed exercises summary
+          const now = new Date();
+          const weightVal = parseFloat(document.getElementById('live-body-weight') ? document.getElementById('live-body-weight').value : "90") || 90;
+          const activeConfig = LIVE_WORKOUTS[currentLiveKey] || {};
+          const dateStr = activeConfig.date || `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}`;
+          const splitName = currentLiveKey === 'legs_shoulders' ? "Ноги + Плечи" : (currentLiveKey === 'back_biceps' ? "Спина + Бицепс" : "Live");
+
+          let totalTonnageKg = 0;
+          let exerciseSummaries = [];
+
+          LIVE_PLAN.forEach(b => {
+            b.exercises.forEach(ex => {
+              if (ex.completedSets && ex.completedSets.length > 0) {
+                ex.completedSets.forEach(s => {
+                  const kgVal = s.weightInKg !== undefined ? s.weightInKg : s.weight;
+                  totalTonnageKg += kgVal * s.reps;
+                });
+
+                // Group consecutive identical sets
+                let groups = [];
+                let cur = null;
+                ex.completedSets.forEach(s => {
+                  if (cur && cur.weight === s.weight && cur.reps === s.reps) {
+                    cur.count++;
+                  } else {
+                    if (cur) groups.push(cur);
+                    cur = { weight: s.weight, reps: s.reps, count: 1 };
+                  }
+                });
+                if (cur) groups.push(cur);
+
+                const setsStr = groups.map(g => g.count > 1 ? `${g.weight}×${g.reps}×${g.count}` : `${g.weight}×${g.reps}`).join(', ');
+                exerciseSummaries.push(`${ex.name}: ${setsStr}`);
+              }
+            });
+          });
+
+          const tonnageTons = +(totalTonnageKg / 1000).toFixed(2);
+
+          // 2. Automatically save entry to general workouts journal if there were completed sets
+          if (totalTonnageKg > 0) {
+            const timeStr = now.toTimeString().substring(0, 5);
+            const journalEntry = {
+              date: dateStr,
+              time: timeStr,
+              split: splitName,
+              tonnage: tonnageTons,
+              weight: weightVal,
+              details: exerciseSummaries.join(' • '),
+              isCustom: true
+            };
+
+            workouts.push(journalEntry);
+            saveWorkoutsToStorage();
+          }
+
+          // 3. Copy DeepSeek formatted text to clipboard
           copyDeepSeekText();
+
+          if (totalTonnageKg > 0) {
+            alert(`🎉 Тренировка «${splitName}» за ${dateStr} успешно записана в Журнал!\nТоннаж: ${tonnageTons} т. Отчёт скопирован в буфер для DeepSeek.`);
+          }
         }
       }
     }
