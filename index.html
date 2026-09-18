@@ -222,7 +222,7 @@
         <span>📋</span> Журнал & Запись
       </button>
       <button id="tab-btn-live" onclick="switchTab('live')" class="py-2 px-3 sm:py-2.5 sm:px-4 rounded-xl border-b-2 border-transparent text-emerald-400 hover:text-emerald-300 flex items-center gap-1.5 whitespace-nowrap font-bold bg-emerald-500/10 border-emerald-500/30">
-        <span class="animate-pulse">⚡</span> Спина + Бицепс (Live)
+        <span class="animate-pulse">⚡</span> <span id="nav-live-title">Ноги + Плечи (Live)</span>
       </button>
       <button id="tab-btn-goals" onclick="switchTab('goals')" class="py-2 px-3 sm:py-2.5 sm:px-4 rounded-xl border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5 whitespace-nowrap">
         <span>🎯</span> Цели
@@ -736,14 +736,25 @@
       <!-- Live Tracker Header & Controls -->
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
         <div>
+          <!-- Workout Type Selector -->
+          <div class="flex flex-wrap items-center gap-2 mb-2">
+            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1">Программа:</span>
+            <button id="plan-btn-legs_shoulders" onclick="switchLiveProgram('legs_shoulders')" class="px-2.5 py-1 rounded-xl text-xs font-bold bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/50 text-orange-300 active:scale-95 transition-all">
+              🍗 Ноги + Плечи (18.09)
+            </button>
+            <button id="plan-btn-back_biceps" onclick="switchLiveProgram('back_biceps')" class="px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-900 border border-slate-700/80 text-slate-400 hover:text-emerald-300 active:scale-95 transition-all">
+              ⚡ Спина + Бицепс (16.09)
+            </button>
+          </div>
+
           <div class="flex items-center gap-2 mb-1">
-            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
-              🔥 ТРЕНИРОВКА СЕГОДНЯ (16.09)
+            <span id="live-date-badge" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-500/20 text-orange-300 border border-orange-500/40">
+              🔥 ТРЕНИРОВКА (18.09)
             </span>
             <span id="live-session-status" class="text-xs text-slate-400 font-mono">Не начата</span>
           </div>
-          <h2 class="text-xl sm:text-2xl font-black text-white">Спина + Бицепс & Таймер Отдыха</h2>
-          <p class="text-xs text-slate-400 mt-0.5">Цель: побить рекорд 10.25 т → выйти на 10.5+ т. Крутилки веса/повторов, таймер и экспорт для DeepSeek.</p>
+          <h2 id="live-tracker-title" class="text-xl sm:text-2xl font-black text-white">Ноги + Плечи & Таймер Отдыха</h2>
+          <p id="live-tracker-desc" class="text-xs text-slate-400 mt-0.5">Цель: побить рекорд 16.89 т (04.09) → выйти на 17.5+ т. Крутилки веса/повторов, таймер и экспорт для DeepSeek.</p>
         </div>
 
         <!-- Controls: Start, Timer, Weight, Finish -->
@@ -1360,45 +1371,113 @@
     }
 
     
-    /* --- LIVE WORKOUT TRACKER LOGIC (16.09 BACK + BICEPS) --- */
-    const LIVE_PLAN = [
-      {
-        id: "block_1",
-        title: "БЛОК 1: ШИРИНА СПИНЫ (Суперсет №1)",
-        restTime: 90,
-        exercises: [
-          { id: "lat_pull", name: "Тяга верхнего блока (широкий хват)", targetWeight: 50, unit: "kg", targetReps: 12, targetSets: 4, weightStep: 2.5, completedSets: [] },
-          { id: "db_row", name: "Тяга гантели в наклоне (каждая рука)", targetWeight: 26, unit: "kg", targetReps: 12, targetSets: 4, weightStep: 2, completedSets: [] }
+    /* --- MULTI-PROGRAM LIVE WORKOUT TRACKER LOGIC --- */
+    const LIVE_WORKOUTS = {
+      legs_shoulders: {
+        id: "legs_shoulders",
+        date: "18.09",
+        title: "Ноги + Плечи & Таймер Отдыха",
+        badge: "🔥 ТРЕНИРОВКА (18.09)",
+        desc: "Цель: побить рекорд 16.89 т (04.09) → выйти на 17.5+ т. Крутилки веса/повторов, таймер и экспорт для DeepSeek.",
+        targetRecordTons: 17.5,
+        blocks: [
+          {
+            id: "legs_base",
+            title: "БЛОК 1: НОГИ (База, Суперсет №1)",
+            restTime: 105,
+            exercises: [
+              { id: "hack_squat", name: "Гакк-присед", targetWeight: 65, unit: "kg", targetReps: 12, targetSets: 4, weightStep: 2.5, completedSets: [] },
+              { id: "leg_ext", name: "Разгибание ног в станке", targetWeight: 45, unit: "kg", targetReps: 12, targetSets: 4, weightStep: 2.5, completedSets: [] }
+            ]
+          },
+          {
+            id: "legs_press",
+            title: "БЛОК 1.2: НОГИ (Суперсет №2)",
+            restTime: 90,
+            exercises: [
+              { id: "leg_press", name: "Жим ногами", targetWeight: 160, unit: "kg", targetReps: 10, targetSets: 4, weightStep: 10, completedSets: [] },
+              { id: "calves", name: "Икры в тренажёре / жиме", targetWeight: 80, unit: "kg", targetReps: 15, targetSets: 4, weightStep: 5, completedSets: [] }
+            ]
+          },
+          {
+            id: "shoulders_heavy",
+            title: "БЛОК 2: ПЛЕЧИ (Суперсет №3)",
+            restTime: 90,
+            exercises: [
+              { id: "db_press", name: "Армейский жим гантелей (каждая)", targetWeight: 22, unit: "kg", targetReps: 10, targetSets: 4, weightStep: 2, completedSets: [] },
+              { id: "upright_row", name: "Тяга штанги к подбородку", targetWeight: 30, unit: "kg", targetReps: 10, targetSets: 4, weightStep: 2.5, completedSets: [] }
+            ]
+          },
+          {
+            id: "shoulders_isolation",
+            title: "БЛОК 2.2: ПЛЕЧИ (Изоляция, Суперсет №4)",
+            restTime: 60,
+            exercises: [
+              { id: "lat_raises", name: "Махи гантелей в стороны", targetWeight: 11, unit: "kg", targetReps: 12, targetSets: 4, weightStep: 1, completedSets: [] },
+              { id: "bent_raises", name: "Махи в наклоне (задняя дельта)", targetWeight: 8, unit: "kg", targetReps: 12, targetSets: 3, weightStep: 1, completedSets: [] }
+            ]
+          },
+          {
+            id: "burnout",
+            title: "БЛОК 3: ДОБИВКА",
+            restTime: 60,
+            exercises: [
+              { id: "abs", name: "Пресс (скручивания / подъёмы)", targetWeight: 0, unit: "kg", targetReps: 20, targetSets: 3, weightStep: 5, completedSets: [] },
+              { id: "hyperext_legs", name: "Гиперэкстензия", targetWeight: 0, unit: "kg", targetReps: 15, targetSets: 3, weightStep: 5, completedSets: [] }
+            ]
+          }
         ]
       },
-      {
-        id: "block_2",
-        title: "БЛОК 2: ТОЛЩИНА СПИНЫ (Суперсет №2)",
-        restTime: 90,
-        exercises: [
-          { id: "bar_row", name: "Тяга штанги в наклоне (обратный хват)", targetWeight: 55, unit: "kg", targetReps: 10, targetSets: 4, weightStep: 2.5, completedSets: [] },
-          { id: "mach_row", name: "Тяга тренажёра сидя (одна рука)", targetWeight: 40, unit: "kg", targetReps: 10, targetSets: 4, weightStep: 2.5, completedSets: [] }
-        ]
-      },
-      {
-        id: "block_3",
-        title: "БЛОК 3: БИЦЕПС (Суперсет №3)",
-        restTime: 60,
-        exercises: [
-          { id: "ez_biceps", name: "EZ-гриф на бицепс", targetWeight: 27, unit: "kg", targetReps: 10, targetSets: 4, weightStep: 1, completedSets: [] },
-          { id: "cable_biceps", name: "Трос на бицепс", targetWeight: 100, unit: "lbs", targetReps: 10, targetSets: 4, weightStep: 5, completedSets: [] }
-        ]
-      },
-      {
-        id: "block_4",
-        title: "БЛОК 4: ДОБИВКА (по желанию)",
-        restTime: 60,
-        exercises: [
-          { id: "hammer_curl", name: "Гантели на бицепс (молотки)", targetWeight: 14, unit: "kg", targetReps: 10, targetSets: 3, weightStep: 2, completedSets: [] },
-          { id: "hyperext", name: "Гиперэкстензия", targetWeight: 0, unit: "kg", targetReps: 15, targetSets: 3, weightStep: 5, completedSets: [] }
+      back_biceps: {
+        id: "back_biceps",
+        date: "16.09",
+        title: "Спина + Бицепс & Таймер Отдыха",
+        badge: "⚡ ТРЕНИРОВКА (16.09)",
+        desc: "Цель: побить рекорд 10.25 т → выйти на 10.5+ т. Крутилки веса/повторов, таймер и экспорт для DeepSeek.",
+        targetRecordTons: 10.5,
+        blocks: [
+          {
+            id: "block_1",
+            title: "БЛОК 1: ШИРИНА СПИНЫ (Суперсет №1)",
+            restTime: 90,
+            exercises: [
+              { id: "lat_pull", name: "Тяга верхнего блока (широкий хват)", targetWeight: 50, unit: "kg", targetReps: 12, targetSets: 4, weightStep: 2.5, completedSets: [] },
+              { id: "db_row", name: "Тяга гантели в наклоне (каждая рука)", targetWeight: 26, unit: "kg", targetReps: 12, targetSets: 4, weightStep: 2, completedSets: [] }
+            ]
+          },
+          {
+            id: "block_2",
+            title: "БЛОК 2: ТОЛЩИНА СПИНЫ (Суперсет №2)",
+            restTime: 90,
+            exercises: [
+              { id: "bar_row", name: "Тяга штанги в наклоне (обратный хват)", targetWeight: 55, unit: "kg", targetReps: 10, targetSets: 4, weightStep: 2.5, completedSets: [] },
+              { id: "mach_row", name: "Тяга тренажёра сидя (одна рука)", targetWeight: 40, unit: "kg", targetReps: 10, targetSets: 4, weightStep: 2.5, completedSets: [] }
+            ]
+          },
+          {
+            id: "block_3",
+            title: "БЛОК 3: БИЦЕПС (Суперсет №3)",
+            restTime: 60,
+            exercises: [
+              { id: "ez_biceps", name: "EZ-гриф на бицепс", targetWeight: 27, unit: "kg", targetReps: 10, targetSets: 4, weightStep: 1, completedSets: [] },
+              { id: "cable_biceps", name: "Трос на бицепс", targetWeight: 100, unit: "lbs", targetReps: 10, targetSets: 4, weightStep: 5, completedSets: [] }
+            ]
+          },
+          {
+            id: "block_4",
+            title: "БЛОК 4: ДОБИВКА (по желанию)",
+            restTime: 60,
+            exercises: [
+              { id: "hammer_curl", name: "Гантели на бицепс (молотки)", targetWeight: 14, unit: "kg", targetReps: 10, targetSets: 3, weightStep: 2, completedSets: [] },
+              { id: "hyperext", name: "Гиперэкстензия", targetWeight: 0, unit: "kg", targetReps: 15, targetSets: 3, weightStep: 5, completedSets: [] }
+            ]
+          }
         ]
       }
-    ];
+    };
+
+    let currentLiveKey = 'legs_shoulders';
+    let LIVE_PLAN = LIVE_WORKOUTS.legs_shoulders.blocks;
 
     let sessionActive = false;
     let sessionStartTime = null;
@@ -1406,8 +1485,29 @@
     let restTimerInterval = null;
     let restRemainingSec = 0;
 
+    function switchLiveProgram(progKey) {
+      if (!LIVE_WORKOUTS[progKey]) return;
+      if (sessionActive) {
+        if (!confirm("Идёт тренировка! Переключить программу? (Таймер сессии будет сохранен)")) return;
+      }
+      currentLiveKey = progKey;
+      localStorage.setItem('athletic_current_program_key', progKey);
+      initLivePlan();
+    }
+
     function initLivePlan() {
-      const saved = localStorage.getItem('athletic_live_plan_v1');
+      // 1. Determine active program key
+      const savedProgKey = localStorage.getItem('athletic_current_program_key');
+      if (savedProgKey && LIVE_WORKOUTS[savedProgKey]) {
+        currentLiveKey = savedProgKey;
+      }
+
+      const activeConfig = LIVE_WORKOUTS[currentLiveKey];
+      LIVE_PLAN = activeConfig.blocks;
+
+      // 2. Load stored completed sets for this program
+      const storageKey = 'athletic_live_plan_' + currentLiveKey;
+      const saved = localStorage.getItem(storageKey);
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
@@ -1417,17 +1517,53 @@
                 LIVE_PLAN[bi].exercises[ei].completedSets = ex.completedSets || [];
                 LIVE_PLAN[bi].exercises[ei].targetWeight = ex.targetWeight;
                 LIVE_PLAN[bi].exercises[ei].targetReps = ex.targetReps;
+                if (ex.unit) LIVE_PLAN[bi].exercises[ei].unit = ex.unit;
               }
             });
           });
         } catch(e) {}
       }
+
+      // 3. Update header UI elements
+      const titleEl = document.getElementById('live-tracker-title');
+      if (titleEl) titleEl.innerText = activeConfig.title;
+
+      const descEl = document.getElementById('live-tracker-desc');
+      if (descEl) descEl.innerText = activeConfig.desc;
+
+      const dateBadge = document.getElementById('live-date-badge');
+      if (dateBadge) {
+        dateBadge.innerText = activeConfig.badge;
+        dateBadge.className = currentLiveKey === 'legs_shoulders' 
+          ? "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-500/20 text-orange-300 border border-orange-500/40"
+          : "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40";
+      }
+
+      const navLiveTitle = document.getElementById('nav-live-title');
+      if (navLiveTitle) {
+        navLiveTitle.innerText = currentLiveKey === 'legs_shoulders' ? "Ноги + Плечи (Live)" : "Спина + Бицепс (Live)";
+      }
+
+      // Update selector buttons styling
+      const btnLegs = document.getElementById('plan-btn-legs_shoulders');
+      const btnBack = document.getElementById('plan-btn-back_biceps');
+      if (btnLegs && btnBack) {
+        if (currentLiveKey === 'legs_shoulders') {
+          btnLegs.className = "px-2.5 py-1 rounded-xl text-xs font-bold bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/50 text-orange-300 active:scale-95 transition-all shadow-sm";
+          btnBack.className = "px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-900 border border-slate-700/80 text-slate-400 hover:text-emerald-300 active:scale-95 transition-all";
+        } else {
+          btnBack.className = "px-2.5 py-1 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border border-emerald-500/50 text-emerald-300 active:scale-95 transition-all shadow-sm";
+          btnLegs.className = "px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-900 border border-slate-700/80 text-slate-400 hover:text-orange-300 active:scale-95 transition-all";
+        }
+      }
+
       renderLiveWorkoutBlocks();
       updateDeepSeekOutput();
     }
 
     function saveLivePlan() {
-      localStorage.setItem('athletic_live_plan_v1', JSON.stringify(LIVE_PLAN));
+      const storageKey = 'athletic_live_plan_' + currentLiveKey;
+      localStorage.setItem(storageKey, JSON.stringify(LIVE_PLAN));
       updateDeepSeekOutput();
     }
 
@@ -1663,9 +1799,10 @@
       const now = new Date();
       const timeStr = now.toTimeString().substring(0, 5);
       const weightVal = document.getElementById('live-body-weight') ? document.getElementById('live-body-weight').value : "90";
+      const dateStr = (LIVE_WORKOUTS[currentLiveKey] && LIVE_WORKOUTS[currentLiveKey].date) ? LIVE_WORKOUTS[currentLiveKey].date : "18.09";
 
       let lines = [
-        "16.09",
+        `${dateStr}`,
         `${timeStr}`,
         `${weightVal}кг`
       ];
@@ -1674,7 +1811,20 @@
       let totalCompletedSets = 0;
       let totalTargetSets = 0;
 
+      // Exact DeepSeek friendly mappings
       const mappingNames = {
+        // Legs + Shoulders
+        hack_squat: "Гакк",
+        leg_ext: "Разгибания",
+        leg_press: "Жим ногами",
+        calves: "Икры",
+        db_press: "Армейский",
+        upright_row: "Тяга к подбородку",
+        lat_raises: "Махи",
+        bent_raises: "Махи в наклоне",
+        abs: "Пресс",
+        hyperext_legs: "Гиперэкстензия",
+        // Back + Biceps
         lat_pull: "Тяга блока",
         db_row: "Тяга гантели",
         bar_row: "Тяга штанги",
@@ -1695,7 +1845,7 @@
               totalTonnageKg += kgVal * s.reps;
             });
 
-            // Group consecutive identical sets: e.g. 50×12×4 or 80×10, 90×8, 95×6
+            // Group consecutive identical sets: e.g. 65×12×4 or 80×10, 90×8
             let groups = [];
             let cur = null;
             ex.completedSets.forEach(s => {
@@ -1728,9 +1878,10 @@
       const setsStat = document.getElementById('live-stat-sets');
       if (setsStat) setsStat.innerText = `${totalCompletedSets} / ${totalTargetSets}`;
 
+      const targetRecord = (LIVE_WORKOUTS[currentLiveKey] && LIVE_WORKOUTS[currentLiveKey].targetRecordTons) ? LIVE_WORKOUTS[currentLiveKey].targetRecordTons : 17.5;
       const remainStat = document.getElementById('live-stat-remain');
       if (remainStat) {
-        const remain = Math.max(0, 10.5 - parseFloat(tonnageTons)).toFixed(2);
+        const remain = Math.max(0, targetRecord - parseFloat(tonnageTons)).toFixed(2);
         remainStat.innerText = `${remain} т`;
       }
     }
@@ -2066,7 +2217,8 @@
       if (typeof LIVE_PLAN !== 'undefined') {
         const hasSets = LIVE_PLAN.some(b => b.exercises.some(e => e.completedSets.length > 0));
         if (hasSets) {
-          out.push("⚡ ТЕКУЩАЯ СЕССИЯ (СПИНА + БИЦЕПС):");
+          const progTitle = (LIVE_WORKOUTS[currentLiveKey] && LIVE_WORKOUTS[currentLiveKey].title) ? LIVE_WORKOUTS[currentLiveKey].title : "ТРЕНИРОВКА";
+          out.push(`⚡ ТЕКУЩАЯ СЕССИЯ (${progTitle.toUpperCase()}):`);
           const deepSeekText = document.getElementById('live-deepseek-output') ? document.getElementById('live-deepseek-output').value : '';
           out.push(deepSeekText);
           out.push("");
