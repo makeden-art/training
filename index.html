@@ -780,28 +780,33 @@
       </div>
 
       <!-- Rest Countdown Bar (Floating / Top) -->
-      <div id="rest-timer-box" class="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xl">
-        <div class="flex items-center gap-3 w-full sm:w-auto">
+      <div id="rest-timer-box" class="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/30 flex flex-col md:flex-row items-center justify-between gap-3 shadow-xl">
+        <div class="flex items-center gap-3 w-full md:w-auto">
           <div class="w-12 h-12 rounded-xl bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 flex items-center justify-center font-mono text-lg font-black shrink-0" id="rest-timer-clock">
             90с
           </div>
           <div>
             <div class="text-[11px] font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
               <span>⏳ Таймер отдыха между подходами</span>
+              <span id="timer-live-indicator" class="w-2 h-2 rounded-full bg-emerald-400 animate-ping hidden"></span>
             </div>
-            <p id="rest-timer-hint" class="text-xs text-slate-400 mt-0.5">90 сек на спину, 60 сек на бицепс. Нажми кнопку для запуска.</p>
+            <p id="rest-timer-hint" class="text-xs text-slate-400 mt-0.5">Работает в фоне и при блокировке iPhone (звук + вибрация + push).</p>
           </div>
         </div>
 
-        <!-- Timer presets -->
-        <div class="flex items-center gap-1.5 w-full sm:w-auto justify-end">
-          <button onclick="startRestTimer(45)" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-mono text-slate-300 font-semibold active:scale-95">45с</button>
-          <button onclick="startRestTimer(60)" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-mono text-cyan-300 font-semibold active:scale-95">60с (бицепс)</button>
-          <button onclick="startRestTimer(90)" class="px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-mono text-white font-bold active:scale-95 shadow-md">90с (спина)</button>
-          <button onclick="stopRestTimer()" class="px-2.5 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-mono font-semibold active:scale-95">Стоп</button>
+        <!-- Timer presets and notification button -->
+        <div class="flex flex-wrap items-center gap-1.5 w-full md:w-auto justify-end">
+          <button onclick="startRestTimer(45)" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-mono text-slate-300 font-semibold active:scale-95 transition">45с</button>
+          <button onclick="startRestTimer(60)" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-mono text-cyan-300 font-semibold active:scale-95 transition">60с</button>
+          <button onclick="startRestTimer(90)" class="px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-mono text-white font-bold active:scale-95 transition shadow-md">90с</button>
+          <button onclick="startRestTimer(120)" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-mono text-amber-300 font-semibold active:scale-95 transition">120с</button>
+          <button onclick="stopRestTimer()" class="px-2.5 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-mono font-semibold active:scale-95 transition">Стоп</button>
+          <button id="btn-timer-notify" onclick="toggleTimerNotificationPermission()" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 flex items-center gap-1 active:scale-95 transition">
+            <span id="icon-timer-notify">🔔</span>
+            <span id="text-timer-notify">Уведомления</span>
+          </button>
         </div>
       </div>
-
       <!-- Workout Blocks Header & Collapse Controls -->
       <div class="flex items-center justify-between px-1">
         <span class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
@@ -1612,8 +1617,6 @@
     let sessionActive = false;
     let sessionStartTime = null;
     let sessionTimerInterval = null;
-    let restTimerInterval = null;
-    let restRemainingSec = 0;
 
     function switchLiveProgram(progKey) {
       if (!LIVE_WORKOUTS[progKey]) return;
@@ -1840,42 +1843,257 @@
       }
     }
 
-    // Rest Countdown Timer
+    // Rest Countdown Timer with Accurate Background Timestamps, Web Audio Chime & Push Notifications
+    let restTimerInterval = null;
+    let restTargetTimestamp = 0;
+    let restRemainingSec = 0;
+    let restTotalSeconds = 90;
+    let restTimerRunning = false;
+    let audioCtx = null;
+
+    function initAudio() {
+      try {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+      } catch(e) {}
+    }
+
+    // Auto-unlock Web Audio on first user interaction so sounds play freely
+    function unlockAudioOnGesture() {
+      initAudio();
+      document.removeEventListener('touchstart', unlockAudioOnGesture);
+      document.removeEventListener('click', unlockAudioOnGesture);
+    }
+    document.addEventListener('touchstart', unlockAudioOnGesture, { passive: true });
+    document.addEventListener('click', unlockAudioOnGesture);
+
+    function playTimerAlertSound() {
+      try {
+        initAudio();
+        if (!audioCtx) return;
+
+        const now = audioCtx.currentTime;
+
+        // Beep 1 (880 Hz - clear chime)
+        const osc1 = audioCtx.createOscillator();
+        const gain1 = audioCtx.createGain();
+        osc1.connect(gain1);
+        gain1.connect(audioCtx.destination);
+        osc1.type = 'triangle';
+        osc1.frequency.setValueAtTime(880, now);
+        gain1.gain.setValueAtTime(0.35, now);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        osc1.start(now);
+        osc1.stop(now + 0.2);
+
+        // Beep 2 (1320 Hz - high accent)
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(1320, now + 0.22);
+        gain2.gain.setValueAtTime(0.45, now + 0.22);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+        osc2.start(now + 0.22);
+        osc2.stop(now + 0.45);
+
+        // Beep 3 (1760 Hz - final workout punch)
+        const osc3 = audioCtx.createOscillator();
+        const gain3 = audioCtx.createGain();
+        osc3.connect(gain3);
+        gain3.connect(audioCtx.destination);
+        osc3.type = 'triangle';
+        osc3.frequency.setValueAtTime(1760, now + 0.48);
+        gain3.gain.setValueAtTime(0.55, now + 0.48);
+        gain3.gain.exponentialRampToValueAtTime(0.001, now + 0.95);
+        osc3.start(now + 0.48);
+        osc3.stop(now + 0.95);
+      } catch(e) {
+        console.warn('Audio play error:', e);
+      }
+    }
+
+    async function toggleTimerNotificationPermission() {
+      initAudio();
+      if (!('Notification' in window)) {
+        alert("Для системных уведомлений на iPhone при заблокированном экране добавь приложение на экран «Домой» (кнопка «Поделиться» внизу Safari → «На экран Домой»). Звуковой сигнал и таймер работают автоматически!");
+        return;
+      }
+      if (Notification.permission === 'granted') {
+        alert("🔔 Уведомления уже активны! Таймер пришлёт сигнал при окончании отдыха.");
+        updateNotificationButtonUI();
+        return;
+      }
+      try {
+        const perm = await Notification.requestPermission();
+        updateNotificationButtonUI();
+        if (perm === 'granted') {
+          sendRestNotification("🔔 Уведомления включены!", "Таймер отдыха теперь уведомит тебя вовремя.");
+        }
+      } catch(err) {
+        console.warn('Permission error:', err);
+      }
+    }
+
+    function updateNotificationButtonUI() {
+      const btn = document.getElementById('btn-timer-notify');
+      const text = document.getElementById('text-timer-notify');
+      const icon = document.getElementById('icon-timer-notify');
+      if (!btn || !text || !icon) return;
+
+      if ('Notification' in window && Notification.permission === 'granted') {
+        btn.className = "px-2.5 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-xs font-semibold text-emerald-300 flex items-center gap-1 active:scale-95 transition";
+        text.innerText = "Уведомления: Вкл";
+        icon.innerText = "🔔";
+      } else {
+        btn.className = "px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 flex items-center gap-1 active:scale-95 transition";
+        text.innerText = "Вкл. уведомления";
+        icon.innerText = "🔕";
+      }
+    }
+
+    function sendRestNotification(title, body) {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      try {
+        if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+          navigator.serviceWorker.ready.then(reg => {
+            reg.showNotification(title, {
+              body: body,
+              icon: './manifest.json',
+              vibrate: [300, 150, 300, 150, 400],
+              tag: 'rest-timer-alert',
+              renotify: true
+            });
+          }).catch(() => {
+            new Notification(title, { body });
+          });
+        } else {
+          new Notification(title, { body });
+        }
+      } catch(e) {}
+    }
+
+    function scheduleServiceWorkerNotification(seconds) {
+      if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          type: 'SCHEDULE_REST_NOTIFICATION',
+          delayMs: seconds * 1000,
+          title: '🔔 Отдых окончен!',
+          body: 'Пора на следующий подход! Вперёд за рекордом 💪'
+        });
+      }
+    }
+
+    function cancelServiceWorkerNotification() {
+      if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          type: 'CANCEL_REST_NOTIFICATION'
+        });
+      }
+    }
+
+    function showRestAlertToast(seconds) {
+      let toast = document.getElementById('rest-alert-toast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'rest-alert-toast';
+        toast.className = 'fixed top-5 left-1/2 -translate-x-1/2 z-50 px-5 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black text-xs sm:text-sm shadow-2xl flex items-center gap-2.5 animate-bounce border-2 border-amber-300';
+        document.body.appendChild(toast);
+      }
+      toast.innerHTML = '<span>🔔</span> <span>ОТДЫХ ОКОНЧЕН (' + seconds + 'с)! ПОРА НА СЛЕДУЮЩИЙ ПОДХОД! 💪</span>';
+      toast.classList.remove('hidden');
+
+      setTimeout(() => {
+        if (toast) toast.classList.add('hidden');
+      }, 5000);
+    }
+
     function startRestTimer(seconds) {
+      initAudio();
       clearInterval(restTimerInterval);
+
+      restTotalSeconds = seconds;
+      restTargetTimestamp = Date.now() + seconds * 1000;
       restRemainingSec = seconds;
+      restTimerRunning = true;
+
       updateRestTimerClock();
 
+      // Schedule background notification in Service Worker
+      scheduleServiceWorkerNotification(seconds);
+
       restTimerInterval = setInterval(() => {
-        restRemainingSec--;
-        if (restRemainingSec <= 0) {
-          clearInterval(restTimerInterval);
-          restRemainingSec = 0;
-          updateRestTimerClock();
-          // Gentle vibration alert
-          if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-          alert("🔔 Отдых окончен! Пора на следующий подход!");
+        const remainingMs = restTargetTimestamp - Date.now();
+        if (remainingMs <= 0) {
+          finishRestTimer();
         } else {
+          restRemainingSec = Math.ceil(remainingMs / 1000);
           updateRestTimerClock();
         }
-      }, 1000);
+      }, 500);
+    }
+
+    function finishRestTimer() {
+      clearInterval(restTimerInterval);
+      restTimerRunning = false;
+      restRemainingSec = 0;
+      restTargetTimestamp = 0;
+      updateRestTimerClock();
+
+      // Sound & vibration & notification
+      playTimerAlertSound();
+      if (navigator.vibrate) navigator.vibrate([300, 150, 300, 150, 400]);
+      sendRestNotification("🔔 Отдых окончен!", "Прошло " + restTotalSeconds + " сек. Пора на следующий подход! 💪");
+      showRestAlertToast(restTotalSeconds);
     }
 
     function stopRestTimer() {
       clearInterval(restTimerInterval);
+      restTimerRunning = false;
       restRemainingSec = 0;
+      restTargetTimestamp = 0;
+      cancelServiceWorkerNotification();
       updateRestTimerClock();
     }
 
+    function handleTimerWakeup() {
+      if (!restTimerRunning || restTargetTimestamp === 0) return;
+
+      const remainingMs = restTargetTimestamp - Date.now();
+      if (remainingMs <= 0) {
+        finishRestTimer();
+      } else {
+        restRemainingSec = Math.ceil(remainingMs / 1000);
+        updateRestTimerClock();
+      }
+    }
+
+    // Wakeup listeners for lock screen / tab switch / screen on
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        handleTimerWakeup();
+      }
+    });
+    window.addEventListener('focus', handleTimerWakeup);
+
     function updateRestTimerClock() {
       const clockEl = document.getElementById('rest-timer-clock');
+      const liveInd = document.getElementById('timer-live-indicator');
       if (!clockEl) return;
+
       if (restRemainingSec > 0) {
-        clockEl.innerText = `${restRemainingSec}с`;
+        clockEl.innerText = restRemainingSec + 'с';
         clockEl.className = "w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-500/50 text-amber-300 flex items-center justify-center font-mono text-lg font-black shrink-0 animate-pulse";
+        if (liveInd) liveInd.classList.remove('hidden');
       } else {
         clockEl.innerText = "Готов";
         clockEl.className = "w-12 h-12 rounded-xl bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 flex items-center justify-center font-mono text-xs font-black shrink-0";
+        if (liveInd) liveInd.classList.add('hidden');
       }
     }
 

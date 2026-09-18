@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fitness-tracker-v6';
+const CACHE_NAME = 'fitness-tracker-v7';
 const ASSETS_TO_CACHE = [
   './',
   './manifest.json',
@@ -58,6 +58,42 @@ self.addEventListener('fetch', (event) => {
         }
         return networkResponse;
       });
+    })
+  );
+});
+
+let restTimerTimeout = null;
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SCHEDULE_REST_NOTIFICATION') {
+    const { delayMs, title, body } = event.data;
+    if (restTimerTimeout) clearTimeout(restTimerTimeout);
+    restTimerTimeout = setTimeout(() => {
+      self.registration.showNotification(title, {
+        body: body,
+        icon: './manifest.json',
+        vibrate: [300, 150, 300, 150, 400],
+        tag: 'rest-timer-alert',
+        renotify: true
+      });
+    }, delayMs);
+  } else if (event.data && event.data.type === 'CANCEL_REST_NOTIFICATION') {
+    if (restTimerTimeout) clearTimeout(restTimerTimeout);
+  }
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ('focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow('./');
+      }
     })
   );
 });
