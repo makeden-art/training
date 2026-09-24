@@ -892,7 +892,7 @@
   <div id="modal-add" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md hidden">
     <div class="glass-card w-full max-w-lg p-5 sm:p-6 rounded-2xl border border-cyan-500/40 shadow-2xl relative max-h-[92vh] overflow-y-auto">
       <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-        <h3 class="text-base sm:text-lg font-black text-white flex items-center gap-2">
+        <h3 id="modal-workout-title" class="text-base sm:text-lg font-black text-white flex items-center gap-2">
           <span>➕</span> Записать новую тренировку
         </h3>
         <button onclick="closeAddModal()" class="w-7 h-7 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center font-bold text-sm">
@@ -936,7 +936,7 @@
 
         <div class="pt-2 flex justify-end gap-2">
           <button type="button" onclick="closeAddModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white font-semibold">Отмена</button>
-          <button type="submit" class="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold shadow-lg shadow-cyan-500/20 active:scale-95 transition">Сохранить тренировку</button>
+          <button id="btn-submit-workout" type="submit" class="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold shadow-lg shadow-cyan-500/20 active:scale-95 transition">Сохранить тренировку</button>
         </div>
       </form>
     </div>
@@ -977,15 +977,55 @@
       alert(`✅ Инъекция №${injectionsCount} (125 мг Тестостерона Энантата) сохранена!\nВсего введено: ${injectionsCount * 125} мг.`);
     }
 
+    let editingWorkoutIndex = null;
+
     function openAddModal() {
+      editingWorkoutIndex = null;
       const now = new Date();
       const d = String(now.getDate()).padStart(2, '0');
       const m = String(now.getMonth() + 1).padStart(2, '0');
+      document.getElementById('form-workout').reset();
+      const titleEl = document.getElementById('modal-workout-title');
+      if (titleEl) titleEl.innerHTML = '<span>➕</span> Записать новую тренировку';
+      const submitBtn = document.getElementById('btn-submit-workout');
+      if (submitBtn) submitBtn.innerText = 'Сохранить тренировку';
       document.getElementById('inp-date').value = `${d}.${m}`;
       document.getElementById('modal-add').classList.remove('hidden');
     }
 
+    function openEditModal(index) {
+      const w = workouts[index];
+      if (!w) return;
+      editingWorkoutIndex = index;
+
+      const titleEl = document.getElementById('modal-workout-title');
+      if (titleEl) titleEl.innerHTML = '<span>✏️</span> Редактировать тренировку';
+      const submitBtn = document.getElementById('btn-submit-workout');
+      if (submitBtn) submitBtn.innerText = 'Сохранить изменения';
+
+      document.getElementById('inp-date').value = w.date || '';
+      document.getElementById('inp-split').value = w.split || 'Грудь + Трицепс';
+      document.getElementById('inp-tonnage').value = w.tonnage !== undefined ? w.tonnage : '';
+      document.getElementById('inp-weight').value = w.weight !== null && w.weight !== undefined ? w.weight : '';
+
+      // Get details or reconstruct from old fields if legacy
+      let detailsVal = w.details;
+      if (!detailsVal) {
+        const parts = [];
+        if (w.bench && w.bench !== '—') parts.push(`Жим: ${w.bench}`);
+        if (w.db && w.db !== '—') parts.push(`Гантели: ${w.db}`);
+        if (w.butterfly && w.butterfly !== '—') parts.push(`Бабочка: ${w.butterfly}`);
+        if (w.french && w.french !== '—') parts.push(`Франц: ${w.french}`);
+        if (w.cable && w.cable !== '—') parts.push(`Трос: ${w.cable}`);
+        detailsVal = parts.join(' • ');
+      }
+      document.getElementById('inp-details').value = detailsVal || '';
+
+      document.getElementById('modal-add').classList.remove('hidden');
+    }
+
     function closeAddModal() {
+      editingWorkoutIndex = null;
       document.getElementById('modal-add').classList.add('hidden');
       document.getElementById('form-workout').reset();
     }
@@ -998,19 +1038,33 @@
       const tonnageVal = parseFloat(document.getElementById('inp-tonnage').value);
       const details = document.getElementById('inp-details') ? document.getElementById('inp-details').value.trim() : '';
 
-      const newEntry = {
-        date,
-        split,
-        tonnage: isNaN(tonnageVal) ? 0 : tonnageVal,
-        weight: isNaN(weightVal) ? null : weightVal,
-        details: details || '—',
-        isCustom: true
-      };
+      if (editingWorkoutIndex !== null && workouts[editingWorkoutIndex]) {
+        // Update existing workout
+        workouts[editingWorkoutIndex].date = date;
+        workouts[editingWorkoutIndex].split = split;
+        workouts[editingWorkoutIndex].tonnage = isNaN(tonnageVal) ? 0 : tonnageVal;
+        workouts[editingWorkoutIndex].weight = isNaN(weightVal) ? null : weightVal;
+        workouts[editingWorkoutIndex].details = details || '—';
 
-      workouts.push(newEntry);
-      saveWorkoutsToStorage();
-      closeAddModal();
-      alert(`🎉 Тренировка за ${date} успешно сохранена!\nТоннаж: ${newEntry.tonnage} т. Сплит: ${split}.`);
+        saveWorkoutsToStorage();
+        closeAddModal();
+        alert(`✅ Тренировка за ${date} («${split}») успешно обновлена!`);
+      } else {
+        // Add new workout
+        const newEntry = {
+          date,
+          split,
+          tonnage: isNaN(tonnageVal) ? 0 : tonnageVal,
+          weight: isNaN(weightVal) ? null : weightVal,
+          details: details || '—',
+          isCustom: true
+        };
+
+        workouts.push(newEntry);
+        saveWorkoutsToStorage();
+        closeAddModal();
+        alert(`🎉 Тренировка за ${date} успешно сохранена!\nТоннаж: ${newEntry.tonnage} т. Сплит: ${split}.`);
+      }
     }
 
     function deleteWorkout(index) {
@@ -1068,7 +1122,10 @@
           <td class="py-2.5 px-3 ${w.weight ? 'text-cyan-300 font-bold' : 'text-slate-500'} whitespace-nowrap">${w.weight ? w.weight.toLocaleString('ru-RU') + ' кг' : '—'}</td>
           <td class="py-2.5 px-3 max-w-xs sm:max-w-md">${detailsHtml}</td>
           <td class="py-2.5 px-2 text-center whitespace-nowrap">
-            <button onclick="deleteWorkout(${idx})" title="Удалить эту запись" class="text-red-400 hover:text-red-200 hover:bg-red-500/30 text-xs px-2 py-1 rounded-lg bg-red-500/20 active:scale-90 transition">✕</button>
+            <div class="flex items-center justify-center gap-1.5">
+              <button onclick="openEditModal(${idx})" title="Редактировать запись" class="text-cyan-400 hover:text-cyan-200 hover:bg-cyan-500/30 text-xs px-2 py-1 rounded-lg bg-cyan-500/20 active:scale-90 transition">✏️</button>
+              <button onclick="deleteWorkout(${idx})" title="Удалить эту запись" class="text-red-400 hover:text-red-200 hover:bg-red-500/30 text-xs px-2 py-1 rounded-lg bg-red-500/20 active:scale-90 transition">✕</button>
+            </div>
           </td>
         `;
         tbody.appendChild(tr);
